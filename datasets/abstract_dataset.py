@@ -20,10 +20,11 @@ class AbstractDataset(Dataset):
     def __getitem__(self, index: int):
         if self.transform is None:
             return np.load(self.records.iloc[index]), self.labels[index]
-        try:
-            data = self.transform(np.load(self.records.iloc[index])).float()
-        except:
-            raise Exception(self.records.iloc[index])
+        # try:
+        #     data = self.transform(np.load(self.records.iloc[index])).float()
+        # except:
+        #     raise Exception(self.records.iloc[index])
+        data = self.transform(np.load(self.records.iloc[index])).float()
         label = torch.tensor(self.labels.iloc[index]).long()
         return data, label
 
