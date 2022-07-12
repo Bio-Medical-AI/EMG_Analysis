@@ -1,4 +1,4 @@
-from datasets.data_module import AbstractDataModule
+from datasets.abstract_data_module import AbstractDataModule
 from models.ResNet import ResNet
 import pytorch_lightning as pl
 import os

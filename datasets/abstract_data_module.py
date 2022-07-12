@@ -10,6 +10,7 @@ from torchvision.transforms import Compose, ToTensor
 from random import randint
 
 from datasets.abstract_dataset import AbstractDataset
+from datasets.data_import import prepare_datasets
 
 
 class AbstractDataModule(pl.LightningDataModule):
@@ -30,6 +31,8 @@ class AbstractDataModule(pl.LightningDataModule):
         super(AbstractDataModule, self).__init__()
         # path
         self.csv_path: os.PathLike = csv_path
+        if not os.path.isfile(self.csv_path):
+            prepare_datasets()
         self.data: pd.DataFrame = pd.read_csv(self.csv_path)
         # split sizes
         self.train_vs_rest_size = train_vs_rest_size

@@ -1,5 +1,3 @@
-from typing import Optional, Any, Callable
-
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.utilities.types import STEP_OUTPUT
