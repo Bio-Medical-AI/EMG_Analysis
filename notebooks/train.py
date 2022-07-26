@@ -1,4 +1,4 @@
-from datasets.abstract_data_module import AbstractDataModule
+from datasets.capgmyo_data_module import CapgMyoDataModule
 from models.ResNet import ResNet
 import pytorch_lightning as pl
 import os
@@ -7,20 +7,20 @@ from torchvision import transforms
 import pickle
 
 
-class Foo:
-    @staticmethod
-    def to_3_channels(self, data):
-        return data.expand(-1, 3, -1, -1)
-
-
 def main():
     pl.seed_everything(42, workers=True)
-
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Resize(256),
+        transforms.CenterCrop(224)
+    ])
     model = ResNet(8, lr=0.1)
     logger = WandbLogger(project="EMG Armband", name="FirstTest")
-    data_module = AbstractDataModule(
-        os.path.join('..', '..', 'Data', 'CapgMyo', 'CapgMyo.csv'),
-        batch_size=100
+    data_module = CapgMyoDataModule(
+        batch_size=70,
+        train_transforms=transform,
+        test_transforms=transform,
+        val_transforms=transform
     )
     trainer = pl.Trainer(gpus=-1, max_epochs=28, logger=logger, accelerator="gpu")
     trainer.fit(model=model, datamodule=data_module)

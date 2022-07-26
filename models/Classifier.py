@@ -15,32 +15,37 @@ class Classifier(pl.LightningModule):
                  lr: float = 1e-3,
                  weight_decay: float = 0.0,
                  optimizer: type(torch.optim.Optimizer) = torch.optim.Adam,
-                 lr_scheduler_lambda: Callable[[int], float] = None):
+                 lr_scheduler_lambda: Callable[[int], float] =
+                    lambda epoch: 1 if epoch < 17 else (0.1 if epoch < 25 else 0.01)):
         super().__init__()
         if lr_scheduler_lambda is None:
             lr_scheduler_lambda = lambda epoch: 1
         self.model = nn.Sequential(
             nn.BatchNorm2d(1),
-            nn.Conv2d(1, 64, (3, 3)),
-            nn.ReLU(),
+            nn.Conv2d(1, 64, (3, 3), (1, 1), (1, 1)),
             nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, (3, 3)),
             nn.ReLU(),
+            nn.Conv2d(64, 64, (3, 3), (1, 1), (1, 1)),
             nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, (1, 1), (1, 1)),
             nn.ReLU(),
+            nn.Conv2d(64, 64, (1, 1)),
             nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, (1, 1), (1, 1)),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, (1, 1)),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
             nn.Flatten(),
-            nn.Dropout(),
+            nn.Dropout(p=0.5),
+            nn.Linear(8192, 512),
+            nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Linear(3072, 512),
-            nn.Dropout(),
-            nn.ReLU(),
+            nn.Dropout(p=0.5),
             nn.Linear(512, 512),
-            nn.Dropout(),
+            nn.BatchNorm1d(512),
             nn.ReLU(),
+            nn.Dropout(p=0.5),
             nn.Linear(512, 128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.Linear(128, num_classes)
         )

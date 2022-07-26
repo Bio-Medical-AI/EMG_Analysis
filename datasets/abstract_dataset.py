@@ -9,7 +9,7 @@ from torchvision.transforms import ToTensor
 class AbstractDataset(Dataset):
     def __init__(self,
                  data_frame: pd.DataFrame,
-                 transform: Compose = ToTensor,
+                 transform: Compose = ToTensor(),
                  source_path_name: str = 'path',
                  target_name: str = 'label'):
         self.records: pd.Series = data_frame[source_path_name]

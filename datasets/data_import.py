@@ -63,13 +63,9 @@ def import_datasets(destination: str, id: str) -> None:
     URL = "https://docs.google.com/uc?export=download"
 
     session = requests.Session()
-
-    response = session.get(URL, params={'id': id}, stream=True)
-    token = get_confirm_token(response)
-
-    if token:
-        params = {'id': id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
+    session.get(URL, params={'id': id}, stream=True)
+    params = {'id': id, 'confirm': 1}
+    response = session.get(URL, params=params, stream=True)
 
     save_response_content(response, destination)
 
@@ -97,6 +93,7 @@ def get_capgmyo_dataset() -> pd.DataFrame:
 
     recordings = []
     labels = []
+    series = []
     for test_object in range(1, 19):
         for gesture in range(1, 9):
             for recording in range(1, 11):
@@ -105,7 +102,6 @@ def get_capgmyo_dataset() -> pd.DataFrame:
                         os.path.dirname(os.getcwd()),
                         'data',
                         'CapgMyo',
-                        'raw',
                         int_in_3(test_object) + '-' +
                         int_in_3(gesture) + '-' +
                         int_in_3(recording)),
@@ -113,12 +109,15 @@ def get_capgmyo_dataset() -> pd.DataFrame:
                 labels.extend([gesture - 1 for _ in range(data.shape[0])])
                 data = np.split(data.reshape((data.shape[0], 16, 8)), data.shape[0])
                 recordings.extend(data)
-    return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels})
+                series.extend(
+                    [(recording - 1) + (gesture - 1) * 10 + (test_object - 1) * 80 for _ in range(data.shape[0])])
+    return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels, 'series': series})
 
 
 def get_csl_dataset() -> pd.DataFrame:
     recordings = []
     labels = []
+    series = []
     for subject in range(1, 6):
         for session in range(1, 6):
             for gest in range(27):
@@ -139,12 +138,14 @@ def get_csl_dataset() -> pd.DataFrame:
                         # trial = np.flipud(np.transpose(trial, axes=(1, 0, 2)))
                         recordings.extend([trial[:, :, k] for k in range(trial.shape[2])])
                         labels.extend([gest for _ in range(trial.shape[2])])
-    return pd.DataFrame({'record': recordings, 'label': labels})
+                        series.extend([gest + (session - 1) * 27 + (subject - 1) * 135 for _ in range(trial.shape[2])])
+    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series})
 
 
 def get_ninapro_dataset() -> pd.DataFrame:
     recordings = []
     labels = []
+    series = []
     for subject in range(1, 28):
         for session in range(1, 4):
             data = extract_data(os.path.join(
@@ -161,7 +162,8 @@ def get_ninapro_dataset() -> pd.DataFrame:
                 'stimulus')
             recordings.extend([d.reshape(10, -1) for d in data])
             labels.extend(gesture[:, 0])
-    return pd.DataFrame({'record': recordings, 'label': labels})
+
+    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series})
 
 
 def save_arrays(dataframe: pd.DataFrame, name: str, path: os.path) -> pd.DataFrame:

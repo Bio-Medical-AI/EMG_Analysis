@@ -1,4 +1,6 @@
 /data
 /notebooks/lightning_logs
 /notebooks/wandb
+/notebooks/EMG Armband
 /notebooks/FirstTest
+/**/__pycache__
