@@ -1,4 +1,3 @@
-import math
 from typing import Callable
 
 import scipy.io
@@ -12,25 +11,57 @@ import patoolib
 DATA_FOLDER = os.path.join('..', 'data')
 
 
-def prepare_datasets() -> None:
-    prepare_capgmyo()
-    prepare_csl()
-    prepare_ninapro()
+def prepare_datasets(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
+                     final_path: str) -> None:
+    prepare_capgmyo(prepare_dataset, final_path)
+    prepare_csl(prepare_dataset, final_path)
+    prepare_ninapro(prepare_dataset, final_path)
+    prepare_myoarmband(prepare_dataset, final_path)
 
 
-def prepare_capgmyo() -> None:
-    prepare_dataset('CapgMyo', '195rtjtCHZ1bFF9ginDeMFfhazwU-wozM', get_capgmyo_dataset)
+def prepare_capgmyo(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
+                    final_path: str) -> None:
+    prepare_dataset('CapgMyo', '195rtjtCHZ1bFF9ginDeMFfhazwU-wozM', get_capgmyo_dataset, final_path)
 
 
-def prepare_csl() -> None:
-    prepare_dataset('csl-hdemg', '1_rpnlF1sqo1Kg5EhtCYuj1Xr6vAuv4jw', get_csl_dataset)
+def prepare_csl(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
+                final_path: str) -> None:
+    prepare_dataset('csl-hdemg', '1_rpnlF1sqo1Kg5EhtCYuj1Xr6vAuv4jw', get_csl_dataset, final_path)
 
 
-def prepare_ninapro() -> None:
-    prepare_dataset('NinaPro', '1qXbf0SXdd8-ppIEKTmZacI_2vqrmjdzk', get_ninapro_dataset)
+def prepare_ninapro(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
+                    final_path: str) -> None:
+    prepare_dataset('NinaPro', '1qXbf0SXdd8-ppIEKTmZacI_2vqrmjdzk', get_ninapro_dataset, final_path)
 
 
-def prepare_dataset(dataset_name: str,  file_id: str, data_loading_function: Callable[[], pd.DataFrame]) -> None:
+def prepare_myoarmband(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
+                       final_path: str) -> None:
+    prepare_dataset('MyoArmband', '1jSr0IQHQLxp2yQgRDwr28iSr4ddoqKu_', get_myoarmband_dataset, final_path)
+
+
+final_folder = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data')
+
+
+def prepare_frame_dataset(dataset_name: str,  file_id: str, data_loading_function: Callable[[], pd.DataFrame],
+                          final_folder: str) -> None:
+    prepare_folders(dataset_name, file_id)
+    if not os.path.exists(final_folder):
+        os.makedirs(final_folder)
+    save_arrays(data_loading_function(), dataset_name, final_folder)
+
+
+def prepare_dataframe_dataset(dataset_name: str,  file_id: str, data_loading_function: Callable[[], pd.DataFrame],
+                        final_folder: str) -> None:
+    prepare_folders(dataset_name, file_id)
+    if not os.path.exists(final_folder):
+        os.makedirs(final_folder)
+    subfolder = os.path.join(final_folder, dataset_name)
+    if not os.path.exists(subfolder):
+        os.makedirs(subfolder)
+    data_loading_function().to_pickle(os.path.join(final_folder, dataset_name, f'{dataset_name}.pkl'))
+
+
+def prepare_folders(dataset_name: str,  file_id: str):
     if not os.path.exists(DATA_FOLDER):
         os.makedirs(DATA_FOLDER)
     destined_folder = os.path.join(DATA_FOLDER, dataset_name)
@@ -40,19 +71,9 @@ def prepare_dataset(dataset_name: str,  file_id: str, data_loading_function: Cal
     if not os.path.exists(rar_file):
         import_datasets(rar_file, file_id)
         patoolib.extract_archive(rar_file, outdir=destined_folder)
-    final_folder = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data')
-    if not os.path.exists(final_folder):
-        os.makedirs(final_folder)
-    save_arrays(data_loading_function(), dataset_name, final_folder)
 
 
 def import_datasets(destination: str, id: str) -> None:
-    def get_confirm_token(response):
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                return value
-        return None
-
     def save_response_content(response, destination):
         CHUNK_SIZE = 32768
         with open(destination, "wb") as f:
@@ -106,11 +127,12 @@ def get_capgmyo_dataset() -> pd.DataFrame:
                         int_in_3(gesture) + '-' +
                         int_in_3(recording)),
                     'data')
-                labels.extend([gesture - 1 for _ in range(data.shape[0])])
-                data = np.split(data.reshape((data.shape[0], 16, 8)), data.shape[0])
+                size = data.shape[0]
+                labels.extend([gesture - 1 for _ in range(size)])
+                data = np.split(data.reshape((size, 16, 8)), size)
                 recordings.extend(data)
                 series.extend(
-                    [(recording - 1) + (gesture - 1) * 10 + (test_object - 1) * 80 for _ in range(data.shape[0])])
+                    [(recording - 1) + (gesture - 1) * 10 + (test_object - 1) * 80 for _ in range(size)])
     return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels, 'series': series})
 
 
@@ -162,30 +184,72 @@ def get_ninapro_dataset() -> pd.DataFrame:
                 'stimulus')
             recordings.extend([d.reshape(10, -1) for d in data])
             labels.extend(gesture[:, 0])
+            series.extend([(session - 1) + (subject - 1) * 3 for _ in range(gesture.shape[0])])
 
     return pd.DataFrame({'record': recordings, 'label': labels, 'series': series})
+
+
+def get_myoarmband_dataset() -> pd.DataFrame:
+    def format_data_to_train(vector_to_format):
+        emg_vector = []
+        records = []
+        for value in vector_to_format:
+            emg_vector.append(value)
+            if len(emg_vector) >= 8:
+                records.append(np.array(emg_vector, dtype=np.float32).reshape((8, 1)))
+                emg_vector = []
+        return pd.DataFrame({'record': records})
+
+    def classe_to_df(path: str, subfolder: str, start_val: int = 0):
+        df = pd.DataFrame({'record': [], 'label': [], 'series': []})
+        for i in range(28):
+            os.path.join(path, f'classe_{i}.dat')
+            arr = np.fromfile(os.path.join(path, subfolder, f'classe_{i}.dat'), dtype=np.int16)
+            arr = np.array(arr, dtype=np.float32)
+            formatted = format_data_to_train(arr)
+            formatted['label'] = i % 7
+            formatted['series'] = start_val + i
+            df = pd.concat([df, formatted], ignore_index=True)
+        return df
+
+    def get_dataset(path: str, subjects: list, subfolder: str, series_val: int = 0.):
+        df = pd.DataFrame()
+        for i, subject in enumerate(subjects):
+            df = pd.concat([df, classe_to_df(os.path.join(path, subject), subfolder, series_val + i * 28)])
+        return df
+
+    path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'MyoArmband')
+    eval_path = os.path.join(path, 'EvaluationDataset')
+    pre_path = os.path.join(path, 'PreTrainingDataset')
+
+    subjects = ['Female0', 'Female1', 'Male0', 'Male1', 'Male2', 'Male3', 'Male4', 'Male5', 'Male6', 'Male7', 'Male8',
+                'Male9', 'Male10', 'Male11', 'Male12', 'Male13', 'Male14', 'Male15']
+    dataset = get_dataset(eval_path, subjects, 'training0')
+    dataset = pd.concat(
+        [dataset, get_dataset(eval_path, subjects, 'Test0', 504)],
+        ignore_index=True)
+    dataset = pd.concat(
+        [dataset, get_dataset(eval_path, subjects, 'Test1', 1008)],
+        ignore_index=True)
+    subjects2 = ['Female0', 'Female1', 'Female2', 'Female3', 'Female4', 'Female5', 'Female6', 'Female7', 'Female8',
+                 'Female9', 'Male0', 'Male1', 'Male2', 'Male3', 'Male4', 'Male5', 'Male6', 'Male7', 'Male8', 'Male9',
+                 'Male10', 'Male11']
+    dataset2 = get_dataset(pre_path, subjects2, 'training0', 1512)
+    final_dataset = pd.concat([dataset, dataset2], ignore_index=True)
+    return final_dataset
 
 
 def save_arrays(dataframe: pd.DataFrame, name: str, path: os.path) -> pd.DataFrame:
     paths = []
     base_path = os.path.join(path, name)
     for index, row in dataframe.iterrows():
-        current_path = os.path.join(base_path, f'{math.floor(int(index) / 200000)}')
+        current_path = os.path.join(base_path, f'{index // 200000}')
         if not os.path.exists(current_path):
             os.makedirs(current_path)
         path = os.path.join(current_path, f'{name}_{index}.npy')
         np.save(path, row['record'])
         paths.append(path)
 
-    df: pd.DataFrame = pd.DataFrame({'path': paths, 'label': dataframe['label']})
+    df: pd.DataFrame = pd.DataFrame({'path': paths, 'label': dataframe['label'], 'series': dataframe['series']})
     df.to_csv(os.path.join(base_path, f'{name}.csv'), index=False)
     return df
-
-
-def main():
-    print(get_ninapro_dataset())
-    print(get_ninapro_dataset().shape)
-
-
-if __name__ == "__main__":
-    main()

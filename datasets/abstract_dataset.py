@@ -1,9 +1,8 @@
 import torch
 import numpy as np
 import pandas as pd
-from torchvision.transforms import Compose
+from torchvision.transforms import Compose, ToTensor
 from torch.utils.data import Dataset
-from torchvision.transforms import ToTensor
 
 
 class AbstractDataset(Dataset):
@@ -24,7 +23,7 @@ class AbstractDataset(Dataset):
         #     data = self.transform(np.load(self.records.iloc[index])).float()
         # except:
         #     raise Exception(self.records.iloc[index])
-        data = self.transform(np.load(self.records.iloc[index])).float()
+        data = self.transform(self.records.iloc[index]).float()
         label = torch.tensor(self.labels.iloc[index]).long()
         return data, label
 

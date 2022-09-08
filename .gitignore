@@ -4,3 +4,5 @@
 /notebooks/EMG Armband
 /notebooks/FirstTest
 /**/__pycache__
+__pycache__/
+*/__pycache__/

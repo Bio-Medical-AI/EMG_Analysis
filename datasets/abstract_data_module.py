@@ -1,6 +1,6 @@
 import math
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 import pandas as pd
 import pytorch_lightning as pl
@@ -10,7 +10,6 @@ from torchvision.transforms import Compose, ToTensor
 from random import randint
 
 from datasets.abstract_dataset import AbstractDataset
-from datasets.data_import import prepare_datasets
 
 
 class AbstractDataModule(pl.LightningDataModule):
@@ -31,9 +30,8 @@ class AbstractDataModule(pl.LightningDataModule):
         super(AbstractDataModule, self).__init__()
         # path
         self.csv_path: os.PathLike = csv_path
-        if not os.path.isfile(self.csv_path):
-            prepare_datasets()
-        self.data: pd.DataFrame = pd.read_csv(self.csv_path)
+        self.data: pd.DataFrame = pd.DataFrame()
+        self.prepare_data()
         # split sizes
         self.train_vs_rest_size = train_vs_rest_size
         self.val_vs_test_size = val_vs_test_size
@@ -55,14 +53,15 @@ class AbstractDataModule(pl.LightningDataModule):
     def prepare_data(self) -> None:
         self.data: pd.DataFrame = pd.read_csv(self.csv_path)
 
-    def setup(self, **kwargs) -> None:
-        self.splits['train'] = self.data\
-            .sample(math.floor(self.data.shape[0] * self.train_vs_rest_size), random_state=self.seed).index
-        self.splits['val'] = self.data.iloc[~self.data.index.isin(self.splits['train'])]\
-            .sample(math.floor((self.data.shape[0]-self.splits['train'].shape[0]) * self.val_vs_test_size),
-                    random_state=self.seed).index
-        self.splits['test'] = self.data.iloc[~self.data.index.isin(self.splits['train'].append(self.splits['val']))].\
-            index
+    def setup(self, stage: Optional[str] = None) -> None:
+        if stage == 'fit':
+            self.splits['train'] = self.data\
+                .sample(math.floor(self.data.shape[0] * self.train_vs_rest_size), random_state=self.seed).index
+            self.splits['val'] = self.data.iloc[~self.data.index.isin(self.splits['train'])]\
+                .sample(math.floor((self.data.shape[0]-self.splits['train'].shape[0]) * self.val_vs_test_size),
+                        random_state=self.seed).index
+            self.splits['test'] = self.data.iloc[~self.data.index.isin(self.splits['train'].append(self.splits['val']))].\
+                index
 
     def train_dataloader(self) -> DataLoader:
         """

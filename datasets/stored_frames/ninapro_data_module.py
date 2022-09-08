@@ -1,11 +1,13 @@
 import os
+
+import torchvision
 from torchvision.transforms import Compose, ToTensor
 
-from datasets.data_import import prepare_capgmyo
-from datasets.abstract_data_module import AbstractDataModule
+from datasets import prepare_ninapro, prepare_frame_dataset, AbstractDataModule
+from utils.transforms import LOAD_NDARRAY
 
 
-class CapgMyoDataModule(AbstractDataModule):
+class NinaProDataModule(AbstractDataModule):
     def __init__(self,
                  train_transforms: Compose = ToTensor(),
                  val_transforms: Compose = ToTensor(),
@@ -18,14 +20,15 @@ class CapgMyoDataModule(AbstractDataModule):
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None):
-        csv_path = os.path.join('..', '..', 'Data', 'CapgMyo', 'CapgMyo.csv')
+        csv_path = os.path.join('..', '..', 'Data', 'NinaPro', 'NinaPro.csv')
         if not os.path.isfile(csv_path):
-            prepare_capgmyo()
-        super(CapgMyoDataModule, self).__init__(
+            prepare_ninapro(prepare_frame_dataset,
+                            os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data'))
+        super(NinaProDataModule, self).__init__(
             csv_path,
-            train_transforms,
-            val_transforms,
-            test_transforms,
+            torchvision.transforms.Compose([LOAD_NDARRAY, train_transforms]),
+            torchvision.transforms.Compose([LOAD_NDARRAY, val_transforms]),
+            torchvision.transforms.Compose([LOAD_NDARRAY, test_transforms]),
             train_vs_rest_size,
             val_vs_test_size,
             source_path_name,

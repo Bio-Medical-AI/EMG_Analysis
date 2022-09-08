@@ -1,29 +1,52 @@
-from datasets.capgmyo_data_module import CapgMyoDataModule
-from models.ResNet import ResNet
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+from datasets.stored_dataframe import MyoArmbandDataModule
+from models import Classifier, OriginalModel, LightningXGBClassifier
 import pytorch_lightning as pl
-import os
 from pytorch_lightning.loggers import WandbLogger
-from torchvision import transforms
-import pickle
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from torchvision.transforms import Compose, ToTensor, Normalize
 
 
 def main():
     pl.seed_everything(42, workers=True)
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize(256),
-        transforms.CenterCrop(224)
+    model_myoarmband = OriginalModel(7, 1, 8)
+    classifier = Classifier(model_myoarmband, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001},
+                            monitor='val_accuracy', sched_kwargs={'patience': 4, 'mode': 'max'})
+    logger_myoarmband = WandbLogger(project="EMG Armband", name="MyoArmband")
+    transform = Compose([
+        ToTensor(),
+        Normalize(0, 1)
     ])
-    model = ResNet(8, lr=0.1)
-    logger = WandbLogger(project="EMG Armband", name="FirstTest")
-    data_module = CapgMyoDataModule(
-        batch_size=70,
+    data_module_myoarmband = MyoArmbandDataModule(
+        batch_size=10000,
+        num_workers=8,
         train_transforms=transform,
+        val_transforms=transform,
         test_transforms=transform,
-        val_transforms=transform
     )
-    trainer = pl.Trainer(gpus=-1, max_epochs=28, logger=logger, accelerator="gpu")
-    trainer.fit(model=model, datamodule=data_module)
+    early_stop_callback = EarlyStopping(monitor='val_accuracy', patience=7, mode='max')
+    trainer_myoarmband = pl.Trainer(gpus=-1, max_epochs=50, logger=logger_myoarmband, accelerator="gpu",
+                                    callbacks=[early_stop_callback])
+
+    trainer_myoarmband.fit(model=classifier, datamodule=data_module_myoarmband)
+    trainer_myoarmband.test(model=classifier, datamodule=data_module_myoarmband)
+
+    # logger_ninapro = WandbLogger(project="EMG Armband", name="NinaProXGB")
+    # model_ninapro = OriginalModel(52, 1, 10)
+    # classifier = Classifier.load_from_checkpoint('C:\\Science\\EMG_Analysis\\notebooks\\EMG '
+    #                                              'Armband\\imieq3ak\\checkpoints\\epoch=99-step=125600.ckpt',
+    #                                              model=model_ninapro)
+    # adjusted_model = classifier.model
+    # adjusted_model.model = adjusted_model.model[0:26]
+    # xgb_classifier = LightningXGBClassifier(adjusted_model, 8)
+    # trainer_xgb = pl.Trainer(max_epochs=2, accelerator="cpu", logger=logger_ninapro, num_sanity_val_steps=0)
+    # data_module_xgb = NinaProDataModule(
+    #     batch_size=8000,
+    #     num_workers=3
+    # )
+    # trainer_xgb.fit(model=xgb_classifier, datamodule=data_module_xgb)
+    # trainer_xgb.test(model=xgb_classifier, datamodule=data_module_xgb)
 
 
 if __name__ == '__main__':
