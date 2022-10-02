@@ -4,6 +4,7 @@ import pandas as pd
 from torchvision.transforms import Compose, ToTensor
 
 from datasets import prepare_capgmyo, prepare_dataframe_dataset, AbstractDataModule
+from definitions import PKL_FOLDER
 
 
 class CapgMyoDataModule(AbstractDataModule):
@@ -15,16 +16,16 @@ class CapgMyoDataModule(AbstractDataModule):
                  val_vs_test_size: float = 0.5,
                  source_path_name: str = 'record',
                  target_name: str = 'label',
+                 group_name: str = 'series',
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None):
-        csv_path = os.path.join('..', '..', 'Data_pkl', 'CapgMyo', 'CapgMyo.pkl')
-        if not os.path.isfile(csv_path):
-            prepare_capgmyo(prepare_dataframe_dataset,
-                            os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data_pkl'))
+        df_path = os.path.join(PKL_FOLDER, 'CapgMyo', 'CapgMyo.pkl')
+        if not os.path.isfile(df_path):
+            prepare_capgmyo(prepare_dataframe_dataset, PKL_FOLDER)
         super(CapgMyoDataModule, self).__init__(
-            csv_path,
+            df_path,
             train_transforms,
             val_transforms,
             test_transforms,
@@ -32,10 +33,11 @@ class CapgMyoDataModule(AbstractDataModule):
             val_vs_test_size,
             source_path_name,
             target_name,
+            group_name,
             batch_size,
             num_workers,
             shuffle_train,
             seed)
 
     def prepare_data(self) -> None:
-        self.data: pd.DataFrame = pd.read_pickle(self.csv_path)
+        self.data: pd.DataFrame = pd.read_pickle(self.df_path)

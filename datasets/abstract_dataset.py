@@ -10,22 +10,24 @@ class AbstractDataset(Dataset):
                  data_frame: pd.DataFrame,
                  transform: Compose = ToTensor(),
                  source_path_name: str = 'path',
-                 target_name: str = 'label'):
+                 target_name: str = 'label',
+                 group_name: str = 'series'):
         self.records: pd.Series = data_frame[source_path_name]
         self.labels: pd.Series = data_frame[target_name]
+        self.group: pd.Series = data_frame[group_name]
         self.transform = transform
         self.samples_amount = data_frame.shape[0]
 
-    def __getitem__(self, index: int):
-        if self.transform is None:
-            return np.load(self.records.iloc[index]), self.labels[index]
-        # try:
-        #     data = self.transform(np.load(self.records.iloc[index])).float()
-        # except:
-        #     raise Exception(self.records.iloc[index])
-        data = self.transform(self.records.iloc[index]).float()
+    def __getitem__(self, index: int) -> dict:
         label = torch.tensor(self.labels.iloc[index]).long()
-        return data, label
+        group = torch.tensor(self.group.iloc[index]).long()
+        out_index = torch.tensor(index).long()
+        if self.transform is None:
+            data = np.load(self.records.iloc[index])
+        else:
+            data = self.transform(self.records.iloc[index]).float()
+
+        return {'data': data, 'label': label, 'group': group, 'index': out_index}
 
     def __len__(self) -> int:
         return self.samples_amount

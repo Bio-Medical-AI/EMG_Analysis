@@ -1,23 +1,31 @@
-from torch.optim import AdamW
+from typing import Any
+
 from xgboost import XGBClassifier
 
-import pytorch_lightning as pl
 import torch
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from torch import Tensor
 import torch.nn as nn
-from torchmetrics.functional import accuracy, f1_score, precision, specificity
+from models.classifier import Classifier
 
 
-class LightningXGBClassifier(pl.LightningModule):
+class LightningXGBClassifier(Classifier):
     def __init__(self,
                  model: nn.Module,
                  num_class: int,
                  objective: str = 'multi:softprob',
                  criterion: nn.Module = nn.CrossEntropyLoss(),
-                 tree_method: str = 'hist'):
-        super().__init__()
-        self.model = model
+                 tree_method: str = 'hist',
+                 time_window: int = 100,
+                 time_step: int = 10,
+                 **kwargs
+                 ):
+        super(LightningXGBClassifier, self).__init__(
+            model=model,
+            time_window=time_window,
+            time_step=time_step,
+            **kwargs
+        )
         self.xgbmodel = XGBClassifier(objective=objective, num_class=num_class, tree_method=tree_method, gpu_id=0)
         self.criterion = criterion
 
@@ -29,60 +37,9 @@ class LightningXGBClassifier(pl.LightningModule):
         y_fit = y.detach().cpu().numpy()
         return self.xgbmodel.fit(x_fit, y_fit)
 
-    def configure_optimizers(self) -> AdamW:
-        return torch.optim.AdamW(self.model.parameters())
-
-    def training_step(self, train_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
-        x, y = train_batch
-        self._fit(x, y)
-
-        loss, acc, f1, prec, spec = self._step(train_batch)
-        logs = {'loss': loss}
-        self.log_dict(logs)
-
-        logs_2 = {'train_accuracy': acc,
-                  'train_f1': f1,
-                  'train_precision': prec,
-                  'train_specificity': spec
-                  }
-        self.log_dict(logs_2, on_step=False, on_epoch=True)
-        logs_2['loss'] = loss
-        return logs_2
-
-    def validation_step(self, val_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
-        loss, acc, f1, prec, spec = self._step(val_batch)
-
-        logs = {'loss': loss,
-                'val_accuracy': acc,
-                'val_f1': f1,
-                'val_precision': prec,
-                'val_specificity': spec
-                }
-        self.log_dict(logs)
-
-        return logs
-
-    def test_step(self, test_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
-        loss, acc, f1, prec, spec = self._step(test_batch)
-        logs = {'loss': loss,
-                'test_accuracy': acc,
-                'test_f1': f1,
-                'test_precision': prec,
-                'test_specificity': spec
-                }
-        self.log_dict(logs)
-        return logs
+    def training_step(self, train_batch: dict[str, Tensor | Any], batch_idx: int) -> STEP_OUTPUT:
+        self._fit(train_batch['data'], train_batch['label'])
+        return super(LightningXGBClassifier, self).training_step(train_batch, batch_idx)
 
     def predict_step(self, predict_batch: Tensor, batch_idx: int, dataloader_idx=0) -> STEP_OUTPUT:
         return self.model(predict_batch)
-
-    def _step(self, batch: tuple[Tensor, Tensor]) -> tuple[float, Tensor, Tensor, Tensor, Tensor]:
-        x, y = batch
-        logits = self.forward(x)
-        loss = self.criterion(logits, y)
-        preds = torch.argmax(logits, dim=1)
-        acc = accuracy(preds, y, average='micro')
-        f1 = f1_score(preds, y, average='micro')
-        prec = precision(preds, y, average='micro')
-        spec = specificity(preds, y, average='micro')
-        return loss, acc, f1, prec, spec

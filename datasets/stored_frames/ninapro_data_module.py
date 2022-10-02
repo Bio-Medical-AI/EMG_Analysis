@@ -5,6 +5,7 @@ from torchvision.transforms import Compose, ToTensor
 
 from datasets import prepare_ninapro, prepare_frame_dataset, AbstractDataModule
 from utils.transforms import LOAD_NDARRAY
+from definitions import FRAMES_FOLDER
 
 
 class NinaProDataModule(AbstractDataModule):
@@ -16,16 +17,16 @@ class NinaProDataModule(AbstractDataModule):
                  val_vs_test_size: float = 0.5,
                  source_path_name: str = 'path',
                  target_name: str = 'label',
+                 group_name: str = 'series',
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None):
-        csv_path = os.path.join('..', '..', 'Data', 'NinaPro', 'NinaPro.csv')
-        if not os.path.isfile(csv_path):
-            prepare_ninapro(prepare_frame_dataset,
-                            os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data'))
+        df_path = os.path.join(FRAMES_FOLDER, 'NinaPro', 'NinaPro.csv')
+        if not os.path.isfile(df_path):
+            prepare_ninapro(prepare_frame_dataset, FRAMES_FOLDER)
         super(NinaProDataModule, self).__init__(
-            csv_path,
+            df_path,
             torchvision.transforms.Compose([LOAD_NDARRAY, train_transforms]),
             torchvision.transforms.Compose([LOAD_NDARRAY, val_transforms]),
             torchvision.transforms.Compose([LOAD_NDARRAY, test_transforms]),
@@ -33,6 +34,7 @@ class NinaProDataModule(AbstractDataModule):
             val_vs_test_size,
             source_path_name,
             target_name,
+            group_name,
             batch_size,
             num_workers,
             shuffle_train,

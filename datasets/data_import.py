@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 import patoolib
 
-DATA_FOLDER = os.path.join('..', 'data')
+from definitions import DATA_FOLDER
 
 
 def prepare_datasets(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
@@ -42,7 +42,7 @@ def prepare_myoarmband(prepare_dataset: Callable[[str, str, Callable[[], pd.Data
 final_folder = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data')
 
 
-def prepare_frame_dataset(dataset_name: str,  file_id: str, data_loading_function: Callable[[], pd.DataFrame],
+def prepare_frame_dataset(dataset_name: str, file_id: str, data_loading_function: Callable[[], pd.DataFrame],
                           final_folder: str) -> None:
     prepare_folders(dataset_name, file_id)
     if not os.path.exists(final_folder):
@@ -50,8 +50,8 @@ def prepare_frame_dataset(dataset_name: str,  file_id: str, data_loading_functio
     save_arrays(data_loading_function(), dataset_name, final_folder)
 
 
-def prepare_dataframe_dataset(dataset_name: str,  file_id: str, data_loading_function: Callable[[], pd.DataFrame],
-                        final_folder: str) -> None:
+def prepare_dataframe_dataset(dataset_name: str, file_id: str, data_loading_function: Callable[[], pd.DataFrame],
+                              final_folder: str) -> None:
     prepare_folders(dataset_name, file_id)
     if not os.path.exists(final_folder):
         os.makedirs(final_folder)
@@ -61,7 +61,7 @@ def prepare_dataframe_dataset(dataset_name: str,  file_id: str, data_loading_fun
     data_loading_function().to_pickle(os.path.join(final_folder, dataset_name, f'{dataset_name}.pkl'))
 
 
-def prepare_folders(dataset_name: str,  file_id: str):
+def prepare_folders(dataset_name: str, file_id: str):
     if not os.path.exists(DATA_FOLDER):
         os.makedirs(DATA_FOLDER)
     destined_folder = os.path.join(DATA_FOLDER, dataset_name)
@@ -84,7 +84,8 @@ def import_datasets(destination: str, id: str) -> None:
     URL = "https://docs.google.com/uc?export=download"
 
     session = requests.Session()
-    session.get(URL, params={'id': id}, stream=True)
+    params = {'id': id}
+    session.get(URL, params=params, stream=True)
     params = {'id': id, 'confirm': 1}
     response = session.get(URL, params=params, stream=True)
 
