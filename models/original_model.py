@@ -10,7 +10,7 @@ class OriginalModel(nn.Module):
                  input_height: int):
         super().__init__()
         self.model = nn.Sequential(
-            nn.BatchNorm2d(1),
+            # nn.BatchNorm2d(1),
             nn.Conv2d(1, 64, (3, 3), (1, 1), (1, 1)),
             nn.BatchNorm2d(64),
             nn.ReLU(),
@@ -39,6 +39,7 @@ class OriginalModel(nn.Module):
             nn.Linear(128, num_classes)
         )
         self.weight_initialization()
+        self.num_classes = num_classes
 
     def weight_initialization(self):
         for layer in self.model:

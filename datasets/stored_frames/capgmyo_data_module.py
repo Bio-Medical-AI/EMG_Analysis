@@ -21,12 +21,16 @@ class CapgMyoDataModule(AbstractDataModule):
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
-                 seed: int = None):
+                 seed: int = None,
+                 k_folds: int = 0):
         df_path = os.path.join(FRAMES_FOLDER, 'CapgMyo', 'CapgMyo.csv')
         if not os.path.isfile(df_path):
             prepare_capgmyo(prepare_frame_dataset, FRAMES_FOLDER)
         super(CapgMyoDataModule, self).__init__(
             df_path,
+            16,
+            8,
+            8,
             torchvision.transforms.Compose([LOAD_NDARRAY, train_transforms]),
             torchvision.transforms.Compose([LOAD_NDARRAY, val_transforms]),
             torchvision.transforms.Compose([LOAD_NDARRAY, test_transforms]),
@@ -38,4 +42,5 @@ class CapgMyoDataModule(AbstractDataModule):
             batch_size,
             num_workers,
             shuffle_train,
-            seed)
+            seed,
+            k_folds)

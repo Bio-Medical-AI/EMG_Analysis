@@ -20,12 +20,16 @@ class NinaProDataModule(AbstractDataModule):
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
-                 seed: int = None):
+                 seed: int = None,
+                 k_folds: int = 0):
         df_path = os.path.join(SERIES_FOLDER, 'NinaPro', 'NinaPro.pkl')
         if not os.path.isfile(df_path):
             prepare_ninapro(prepare_dataframe_dataset, SERIES_FOLDER)
         super(NinaProDataModule, self).__init__(
             df_path,
+            1,
+            10,
+            52,
             train_transforms,
             val_transforms,
             test_transforms,
@@ -37,7 +41,8 @@ class NinaProDataModule(AbstractDataModule):
             batch_size,
             num_workers,
             shuffle_train,
-            seed)
+            seed,
+            k_folds)
 
     def prepare_data(self) -> None:
         self.data: pd.DataFrame = pd.read_pickle(self.df_path)

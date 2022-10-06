@@ -1,7 +1,6 @@
 /data
 /notebooks/lightning_logs
-/notebooks/wandb
-/notebooks/EMG Armband
+/notebooks/wandb_logs
 /notebooks/FirstTest
 __pycache__/
 *.pyc
