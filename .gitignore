@@ -1,6 +1,6 @@
 /data
 /notebooks/lightning_logs
-/notebooks/wandb_logs
-/notebooks/FirstTest
+/notebooks/wandb_logs/*
+/saved_models/*
 __pycache__/
 *.pyc

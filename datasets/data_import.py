@@ -5,8 +5,8 @@ import numpy as np
 from pathlib import Path
 import os
 import pandas as pd
-import requests
 import patoolib
+import gdown
 
 from definitions import DATA_FOLDER
 
@@ -21,22 +21,22 @@ def prepare_datasets(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFr
 
 def prepare_capgmyo(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                     final_path: str) -> None:
-    prepare_dataset('CapgMyo', '195rtjtCHZ1bFF9ginDeMFfhazwU-wozM', get_capgmyo_dataset, final_path)
+    prepare_dataset('CapgMyo', '1Xjtkr-rl2m3_80BvNg1wYSXN8yNaevZl', get_capgmyo_dataset, final_path)
 
 
 def prepare_csl(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                 final_path: str) -> None:
-    prepare_dataset('csl-hdemg', '1_rpnlF1sqo1Kg5EhtCYuj1Xr6vAuv4jw', get_csl_dataset, final_path)
+    prepare_dataset('csl-hdemg', '11lXdDHdSlT1whpyEuA1Dv24QT4AKkMJ1', get_csl_dataset, final_path)
 
 
 def prepare_ninapro(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                     final_path: str) -> None:
-    prepare_dataset('NinaPro', '1qXbf0SXdd8-ppIEKTmZacI_2vqrmjdzk', get_ninapro_dataset, final_path)
+    prepare_dataset('NinaPro', '1BtNxCiGIqVWYiPtf0AxyZuTY0uz8j6we', get_ninapro_dataset, final_path)
 
 
 def prepare_myoarmband(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                        final_path: str) -> None:
-    prepare_dataset('MyoArmband', '1jSr0IQHQLxp2yQgRDwr28iSr4ddoqKu_', get_myoarmband_dataset, final_path)
+    prepare_dataset('MyoArmband', '1dO72tvtx5HOzZZ0C56IIUdCIVO3nNGt5', get_myoarmband_dataset, final_path)
 
 
 final_folder = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data')
@@ -67,37 +67,22 @@ def prepare_folders(dataset_name: str, file_id: str):
     destined_folder = os.path.join(DATA_FOLDER, dataset_name)
     if not os.path.exists(destined_folder):
         os.makedirs(destined_folder)
-    rar_file = os.path.join(destined_folder, dataset_name + '.rar')
-    if not os.path.exists(rar_file):
-        import_datasets(rar_file, file_id)
-        patoolib.extract_archive(rar_file, outdir=destined_folder)
+    zip_file = os.path.join(destined_folder, dataset_name + '.zip')
+    if not os.path.exists(zip_file):
+        import_datasets(zip_file, file_id)
+        patoolib.extract_archive(zip_file, outdir=destined_folder)
 
 
 def import_datasets(destination: str, id: str) -> None:
-    def save_response_content(response, destination):
-        CHUNK_SIZE = 32768
-        with open(destination, "wb") as f:
-            for chunk in response.iter_content(CHUNK_SIZE):
-                if chunk:
-                    f.write(chunk)
-
-    URL = "https://docs.google.com/uc?export=download"
-
-    session = requests.Session()
-    params = {'id': id}
-    session.get(URL, params=params, stream=True)
-    params = {'id': id, 'confirm': 1}
-    response = session.get(URL, params=params, stream=True)
-
-    save_response_content(response, destination)
+    gdown.download(id=id, output=destination, quiet=False)
 
 
-def extract_data(relative_path: bytes | str, name: str) -> np.ndarray:
+def extract_data(relative_path: bytes or str, name: str) -> np.ndarray:
     path = get_absolute_path(relative_path)
     return np.array(scipy.io.loadmat(path)[name])
 
 
-def get_absolute_path(relative_path: bytes | str) -> bytes | str:
+def get_absolute_path(relative_path: bytes or str) -> bytes or str:
     return os.path.join(Path(os.path.abspath(__file__)).parent, relative_path)
 
 
@@ -116,6 +101,7 @@ def get_capgmyo_dataset() -> pd.DataFrame:
     recordings = []
     labels = []
     series = []
+    subjects = []
     for test_object in range(1, 19):
         for gesture in range(1, 9):
             for recording in range(1, 11):
@@ -134,13 +120,15 @@ def get_capgmyo_dataset() -> pd.DataFrame:
                 recordings.extend(data)
                 series.extend(
                     [(recording - 1) + (gesture - 1) * 10 + (test_object - 1) * 80 for _ in range(size)])
-    return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels, 'series': series})
+                subjects.extend([test_object for _ in range(size)])
+    return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels, 'series': series, 'subject': subjects})
 
 
 def get_csl_dataset() -> pd.DataFrame:
     recordings = []
     labels = []
     series = []
+    subjects = []
     for subject in range(1, 6):
         for session in range(1, 6):
             for gest in range(27):
@@ -162,13 +150,16 @@ def get_csl_dataset() -> pd.DataFrame:
                         recordings.extend([trial[:, :, k] for k in range(trial.shape[2])])
                         labels.extend([gest for _ in range(trial.shape[2])])
                         series.extend([gest + (session - 1) * 27 + (subject - 1) * 135 for _ in range(trial.shape[2])])
-    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series})
+                        subjects.extend([subject for _ in range(trial.shape[2])])
+    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series, 'subject': subjects})
 
 
 def get_ninapro_dataset() -> pd.DataFrame:
     recordings = []
     labels = []
     series = []
+    subjects = []
+    last_series = -1
     for subject in range(1, 28):
         for session in range(1, 4):
             data = extract_data(os.path.join(
@@ -185,9 +176,19 @@ def get_ninapro_dataset() -> pd.DataFrame:
                 'stimulus')
             recordings.extend([d.reshape(10, -1) for d in data])
             labels.extend(gesture[:, 0])
-            series.extend([(session - 1) + (subject - 1) * 3 for _ in range(gesture.shape[0])])
+            counter = 1 + last_series
+            series.append(counter)
+            previous = gesture[0, 0]
+            for gest in gesture[1:, 0]:
+                if gest != previous:
+                    counter += 1
+                previous = gest
+                series.append(counter)
+            last_series = counter
+            # series.extend([(session - 1) + (subject - 1) * 3 for _ in range(gesture.shape[0])])
+            subjects.extend([subject for _ in range(gesture.shape[0])])
 
-    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series})
+    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series, 'subject': subjects})
 
 
 def get_myoarmband_dataset() -> pd.DataFrame:
@@ -202,7 +203,7 @@ def get_myoarmband_dataset() -> pd.DataFrame:
         return pd.DataFrame({'record': records})
 
     def classe_to_df(path: str, subfolder: str, start_val: int = 0):
-        df = pd.DataFrame({'record': [], 'label': [], 'series': []})
+        df = pd.DataFrame(columns=['record', 'label', 'series', 'subject'])
         for i in range(28):
             os.path.join(path, f'classe_{i}.dat')
             arr = np.fromfile(os.path.join(path, subfolder, f'classe_{i}.dat'), dtype=np.int16)
@@ -216,7 +217,9 @@ def get_myoarmband_dataset() -> pd.DataFrame:
     def get_dataset(path: str, subjects: list, subfolder: str, series_val: int = 0.):
         df = pd.DataFrame()
         for i, subject in enumerate(subjects):
-            df = pd.concat([df, classe_to_df(os.path.join(path, subject), subfolder, series_val + i * 28)])
+            tmp_df = classe_to_df(os.path.join(path, subject), subfolder, series_val + i * 28)
+            tmp_df['subject'] = i + series_val // 28
+            df = pd.concat([df, tmp_df])
         return df
 
     path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'MyoArmband')
@@ -251,6 +254,7 @@ def save_arrays(dataframe: pd.DataFrame, name: str, path: os.path) -> pd.DataFra
         np.save(path, row['record'])
         paths.append(path)
 
-    df: pd.DataFrame = pd.DataFrame({'path': paths, 'label': dataframe['label'], 'series': dataframe['series']})
+    df: pd.DataFrame = pd.DataFrame({'path': paths, 'label': dataframe['label'], 'series': dataframe['series'],
+                                     'subject': dataframe['subject']})
     df.to_csv(os.path.join(base_path, f'{name}.csv'), index=False)
     return df

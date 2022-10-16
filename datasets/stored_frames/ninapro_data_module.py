@@ -3,7 +3,7 @@ import os
 import torchvision
 from torchvision.transforms import Compose, ToTensor
 
-from datasets import prepare_ninapro, prepare_frame_dataset, AbstractDataModule
+from datasets import prepare_ninapro, prepare_frame_dataset, AbstractDataModule, AbstractDataset
 from utils.transforms import LOAD_NDARRAY
 from definitions import FRAMES_FOLDER
 
@@ -15,14 +15,17 @@ class NinaProDataModule(AbstractDataModule):
                  test_transforms: Compose = ToTensor(),
                  train_vs_rest_size: float = 0.8,
                  val_vs_test_size: float = 0.5,
-                 source_path_name: str = 'path',
+                 source_name: str = 'path',
                  target_name: str = 'label',
-                 group_name: str = 'series',
+                 series_name: str = 'series',
+                 subject_name: str = 'subject',
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None,
-                 k_folds: int = 0):
+                 k_folds: int = 0,
+                 dataset: type = AbstractDataset,
+                 split_method: str = 'default'):
         df_path = os.path.join(FRAMES_FOLDER, 'NinaPro', 'NinaPro.csv')
         if not os.path.isfile(df_path):
             prepare_ninapro(prepare_frame_dataset, FRAMES_FOLDER)
@@ -30,17 +33,21 @@ class NinaProDataModule(AbstractDataModule):
             df_path,
             1,
             10,
+            1,
             52,
             torchvision.transforms.Compose([LOAD_NDARRAY, train_transforms]),
             torchvision.transforms.Compose([LOAD_NDARRAY, val_transforms]),
             torchvision.transforms.Compose([LOAD_NDARRAY, test_transforms]),
             train_vs_rest_size,
             val_vs_test_size,
-            source_path_name,
+            source_name,
             target_name,
-            group_name,
+            series_name,
+            subject_name,
             batch_size,
             num_workers,
             shuffle_train,
             seed,
-            k_folds)
+            k_folds,
+            dataset,
+            split_method)

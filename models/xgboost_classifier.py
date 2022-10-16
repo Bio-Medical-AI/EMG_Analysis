@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict
 
 from xgboost import XGBClassifier
 
@@ -37,7 +37,7 @@ class LightningXGBClassifier(Classifier):
         y_fit = y.detach().cpu().numpy()
         return self.xgbmodel.fit(x_fit, y_fit)
 
-    def training_step(self, train_batch: dict[str, Tensor | Any], batch_idx: int) -> STEP_OUTPUT:
+    def training_step(self, train_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         self._fit(train_batch['data'], train_batch['label'])
         return super(LightningXGBClassifier, self).training_step(train_batch, batch_idx)
 

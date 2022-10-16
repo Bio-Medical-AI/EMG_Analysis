@@ -7,11 +7,11 @@ class OriginalModel(nn.Module):
     def __init__(self,
                  num_classes: int,
                  input_width: int,
-                 input_height: int):
+                 input_height: int,
+                 channels: int):
         super().__init__()
         self.model = nn.Sequential(
-            # nn.BatchNorm2d(1),
-            nn.Conv2d(1, 64, (3, 3), (1, 1), (1, 1)),
+            nn.Conv2d(channels, 64, (3, 3), (1, 1), (1, 1)),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Conv2d(64, 64, (3, 3), (1, 1), (1, 1)),

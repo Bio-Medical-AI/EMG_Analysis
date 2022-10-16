@@ -1,9 +1,8 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-import wandb
 from pytorch_lightning.utilities.types import STEP_OUTPUT, EPOCH_OUTPUT
 from torch import Tensor
 import torch.nn as nn
@@ -37,7 +36,7 @@ class Classifier(pl.LightningModule):
     def forward(self, x: Tensor) -> Tensor:
         return self.model(x)
 
-    def configure_optimizers(self) -> dict[str, dict[str, LambdaLR | None] | Any]:
+    def configure_optimizers(self) -> Dict[str, Dict[str, LambdaLR or None] or Any]:
         optim_kwargs = self.hparams.optim_kwargs if 'optim_kwargs' in self.hparams else {}
         optimizer = self.optimizer(self.model.parameters(), **optim_kwargs)
 
@@ -54,7 +53,7 @@ class Classifier(pl.LightningModule):
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler_config}
 
-    def training_step(self, train_batch: dict[str, Tensor | Any], batch_idx: int) -> STEP_OUTPUT:
+    def training_step(self, train_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         results = self._step(train_batch)
         logs = {'loss': results['loss']}
         self.log_dict(logs)
@@ -68,7 +67,7 @@ class Classifier(pl.LightningModule):
             'train_speccificity': results['spec'],
             'train_precision': results['prec']})
 
-    def validation_step(self, val_batch: dict[str, Tensor | Any], batch_idx: int) -> STEP_OUTPUT:
+    def validation_step(self, val_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         results = self._step(val_batch)
         return results
 
@@ -87,7 +86,7 @@ class Classifier(pl.LightningModule):
                 }
         self.log_dict(logs)
 
-    def test_step(self, test_batch: dict[str, Tensor | Any], batch_idx: int) -> STEP_OUTPUT:
+    def test_step(self, test_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         results = self._step(test_batch)
         return results
 
@@ -95,7 +94,6 @@ class Classifier(pl.LightningModule):
         results = self._epoch_end(test_step_outputs)
         results = self._eval_epoch_end(results)
 
-        class_names = [f'gesture {n + 1}' for n in range(torch.unique(results['full_labels']).shape[0])]
         logs = {'test_majority_voting_accuracy': results['majority_acc'],
                 'test_majority_voting_f1': results['majority_f1'],
                 'test_majority_voting_precision': results['majority_prec'],
@@ -105,27 +103,16 @@ class Classifier(pl.LightningModule):
                 'test_accuracy': results['acc'],
                 'test_f1': results['f1']
                 }
-        plot_logs = {
-            'majority_voting_confusion_matrix': wandb.plot.confusion_matrix(
-                probs=None, y_true=results['labels'].detach().numpy(),
-                preds=results['preds'].detach().numpy(),
-                class_names=class_names),
-            'confusion_matrix': wandb.plot.confusion_matrix(
-                probs=None, y_true=results['full_labels'].detach().numpy(),
-                preds=results['full_preds'].detach().numpy(),
-                class_names=class_names)
-        }
         self.log_dict(logs)
-        self.trainer.logger.log_metrics(plot_logs)
         self.trainer.logger.finalize('success')
 
     def predict_step(self, predict_batch: Tensor, batch_idx: int, dataloader_idx=0) -> STEP_OUTPUT:
         return self.model(predict_batch)
 
-    def _step(self, batch: dict[str, Tensor | Any]) -> dict[str, Tensor | Any]:
+    def _step(self, batch: Dict[str, Tensor or Any]) -> Dict[str, Tensor or Any]:
         x = batch['data']
         y = batch['label']
-        group = batch['group']
+        series = batch['series']
         index = batch['index']
         logits = self.forward(x)
         loss = self.criterion(logits, y)
@@ -133,25 +120,25 @@ class Classifier(pl.LightningModule):
         return {'loss': loss,
                 'preds': preds,
                 'labels': y,
-                'group': group,
+                'series': series,
                 'index': index}
 
     def _moving_average(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.shape[0] >= self.time_window:
             preds = []
             labels = []
-            for i in range((df.shape[0] - self.time_window) // self.time_step):
+            for i in range((df.shape[0] - self.time_window) // self.time_step + 1):
                 tmp = df.iloc[(i * self.time_step):(i * self.time_step + self.time_window)]
                 preds.append(tmp['preds'].mode()[0].item())
                 labels.append(tmp['labels'].mode()[0].item())
             return pd.DataFrame({'preds': preds, 'labels': labels})
         else:
-            return pd.DataFrame({'preds': df['preds'].mode()[0].item(), 'labels': df['labels'].mode()[0].item()})
+            return pd.DataFrame({'preds': [df['preds'].mode()[0].item()], 'labels': [df['labels'].mode()[0].item()]})
 
     def _epoch_end(self, step_outputs: EPOCH_OUTPUT) -> STEP_OUTPUT:
         preds = self._connect_epoch_results(step_outputs, 'preds')
         labels = self._connect_epoch_results(step_outputs, 'labels')
-        group = self._connect_epoch_results(step_outputs, 'group')
+        series = self._connect_epoch_results(step_outputs, 'series')
         index = self._connect_epoch_results(step_outputs, 'index')
         loss = [step['loss'] for step in step_outputs]
         acc = accuracy(preds, labels, average='micro')
@@ -161,7 +148,7 @@ class Classifier(pl.LightningModule):
         return {'loss': loss,
                 'preds': preds,
                 'labels': labels,
-                'group': group,
+                'series': series,
                 'index': index,
                 'acc': acc,
                 'f1': f1,
@@ -172,13 +159,13 @@ class Classifier(pl.LightningModule):
         tmp_dict = {
             'preds': step_outputs['preds'],
             'labels': step_outputs['labels'],
-            'group': step_outputs['group'],
+            'series': step_outputs['series'],
             'index': step_outputs['index'],
         }
         df = pd.DataFrame(tmp_dict).sort_values(by=['index'])
         tmp_df = pd.DataFrame(columns=['preds', 'labels'])
-        for series in df['group'].unique().tolist():
-            tmp_df = tmp_df.append(self._moving_average(df.loc[df['group'] == series]), ignore_index=True)
+        for series in df['series'].unique().tolist():
+            tmp_df = tmp_df.append(self._moving_average(df.loc[df['series'] == series]), ignore_index=True)
 
         majority_preds = torch.tensor(tmp_df['preds'].values.tolist())
         majority_labels = torch.tensor(tmp_df['labels'].values.tolist())
@@ -193,7 +180,7 @@ class Classifier(pl.LightningModule):
                 'prec': step_outputs['prec'],
                 'spec': step_outputs['spec'],
                 'preds': step_outputs['preds'],
-                'labels': ['labels'],
+                'labels': step_outputs['labels'],
                 'majority_preds': majority_preds,
                 'majority_labels': majority_labels,
                 'majority_prec': majority_prec,
@@ -201,7 +188,7 @@ class Classifier(pl.LightningModule):
                 'majority_acc': majority_acc,
                 'majority_f1': majority_f1}
 
-    def _connect_epoch_results(self, step_outputs: list[dict[str, Tensor | Any]], key: str):
+    def _connect_epoch_results(self, step_outputs: List[Dict[str, Tensor or Any]], key: str):
         to_concat = []
         for output in step_outputs:
             to_concat.append(output[key].detach().cpu())

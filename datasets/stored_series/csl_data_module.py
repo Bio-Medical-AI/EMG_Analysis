@@ -2,8 +2,8 @@ import os
 
 import pandas as pd
 from torchvision.transforms import Compose, ToTensor
-
-from datasets import prepare_csl, prepare_dataframe_dataset, AbstractDataModule
+from functools import partial
+from datasets import prepare_csl, prepare_dataframe_dataset, AbstractDataModule, SpaceTimeDataset
 from definitions import SERIES_FOLDER
 
 
@@ -14,14 +14,18 @@ class CslDataModule(AbstractDataModule):
                  test_transforms: Compose = ToTensor(),
                  train_vs_rest_size: float = 0.8,
                  val_vs_test_size: float = 0.5,
-                 source_path_name: str = 'series',
+                 source_name: str = 'record',
                  target_name: str = 'label',
-                 group_name: str = 'series',
+                 series_name: str = 'series',
+                 subject_name: str = 'subject',
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None,
-                 k_folds: int = 0):
+                 k_folds: int = 0,
+                 dataset: type = partial(SpaceTimeDataset, window_length=10, window_step=1),
+                 split_method: str = 'default',
+                 series_length: int = 10):
         df_path = os.path.join(SERIES_FOLDER, 'csl-hdemg', 'csl-hdemg.pkl')
         if not os.path.isfile(df_path):
             prepare_csl(prepare_dataframe_dataset, SERIES_FOLDER)
@@ -29,20 +33,24 @@ class CslDataModule(AbstractDataModule):
             df_path,
             7,
             24,
+            series_length,
             27,
             train_transforms,
             val_transforms,
             test_transforms,
             train_vs_rest_size,
             val_vs_test_size,
-            source_path_name,
+            source_name,
             target_name,
-            group_name,
+            series_name,
+            subject_name,
             batch_size,
             num_workers,
             shuffle_train,
             seed,
-            k_folds)
+            k_folds,
+            dataset,
+            split_method)
 
     def prepare_data(self) -> None:
         self.data: pd.DataFrame = pd.read_pickle(self.df_path)

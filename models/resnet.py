@@ -5,6 +5,7 @@ from torch import Tensor
 import torch.nn as nn
 from torchmetrics.functional import accuracy
 import torchvision.models as models
+from typing import Tuple
 
 
 class ResNet(pl.LightningModule):
@@ -29,14 +30,14 @@ class ResNet(pl.LightningModule):
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return self.optimizer(self.parameters(), lr=self.lr)
 
-    def training_step(self, train_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
+    def training_step(self, train_batch: Tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
         outputs, y = self.__step_basics(train_batch)
         loss = self.criterion(outputs, y)
         logs = {'loss': loss}
         self.log_dict(logs)
         return logs
 
-    def validation_step(self, val_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
+    def validation_step(self, val_batch: Tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
         outputs, y = self.__step_basics(val_batch)
         loss = self.criterion(outputs, y)
         acc = accuracy(outputs, y)
@@ -44,7 +45,7 @@ class ResNet(pl.LightningModule):
         self.log_dict(logs)
         return logs
 
-    def test_step(self, test_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
+    def test_step(self, test_batch: Tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
         outputs, y = self.__step_basics(test_batch)
         loss = self.criterion(outputs, y)
         acc = accuracy(outputs, y)
@@ -55,7 +56,7 @@ class ResNet(pl.LightningModule):
     def predict_step(self, predict_batch: Tensor, batch_idx: int, dataloader_idx=0) -> STEP_OUTPUT:
         return self.model(predict_batch)
 
-    def __step_basics(self, batch: tuple[Tensor, Tensor]):
+    def __step_basics(self, batch: Tuple[Tensor, Tensor]):
         x, y = batch
         if torch.cuda.is_available():
             x.cuda()
@@ -86,14 +87,14 @@ class ResNetTest(pl.LightningModule):
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return self.optimizer(self.parameters(), lr=self.lr)
 
-    def training_step(self, train_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
+    def training_step(self, train_batch: Tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
         outputs, y = self.__step_basics(train_batch)
         loss = self.criterion(outputs, y)
         logs = {'loss': loss}
         self.log_dict(logs)
         return logs
 
-    def validation_step(self, val_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
+    def validation_step(self, val_batch: Tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
         outputs, y = self.__step_basics(val_batch)
         loss = self.criterion(outputs, y)
         acc = accuracy(outputs, y)
@@ -101,7 +102,7 @@ class ResNetTest(pl.LightningModule):
         self.log_dict(logs)
         return logs
 
-    def test_step(self, test_batch: tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
+    def test_step(self, test_batch: Tuple[Tensor, Tensor], batch_idx: int) -> STEP_OUTPUT:
         outputs, y = self.__step_basics(test_batch)
         loss = self.criterion(outputs, y)
         acc = accuracy(outputs, y)
@@ -112,7 +113,7 @@ class ResNetTest(pl.LightningModule):
     def predict_step(self, predict_batch: Tensor, batch_idx: int, dataloader_idx=0) -> STEP_OUTPUT:
         return self.model(predict_batch)
 
-    def __step_basics(self, batch: tuple[Tensor, Tensor]):
+    def __step_basics(self, batch: Tuple[Tensor, Tensor]):
         x, y = batch
         if torch.cuda.is_available():
             x.cuda()
