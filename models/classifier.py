@@ -129,9 +129,9 @@ class Classifier(pl.LightningModule):
             labels = []
             for i in range((df.shape[0] - self.time_window) // self.time_step + 1):
                 tmp = df.iloc[(i * self.time_step):(i * self.time_step + self.time_window)]
-                preds.append(tmp['preds'].mode()[0].item())
-                labels.append(tmp['labels'].mode()[0].item())
-            return pd.DataFrame({'preds': preds, 'labels': labels})
+                preds.append(tmp['preds'].values.tolist())
+                labels.append(tmp['labels'].head(1).item())
+            return pd.DataFrame({'preds': torch.mode(torch.Tensor(preds))[0].tolist(), 'labels': labels})
         else:
             return pd.DataFrame({'preds': [df['preds'].mode()[0].item()], 'labels': [df['labels'].mode()[0].item()]})
 
@@ -162,10 +162,19 @@ class Classifier(pl.LightningModule):
             'series': step_outputs['series'],
             'index': step_outputs['index'],
         }
+        print('sort -------------------------------------------')
+        print('sort -------------------------------------------')
         df = pd.DataFrame(tmp_dict).sort_values(by=['index'])
+        print('end sort -------------------------------------------')
+        print('end sort -------------------------------------------')
         tmp_df = pd.DataFrame(columns=['preds', 'labels'])
+        print('moving avg -------------------------------------------')
+        print('moving avg -------------------------------------------')
         for series in df['series'].unique().tolist():
             tmp_df = tmp_df.append(self._moving_average(df.loc[df['series'] == series]), ignore_index=True)
+        print('end moving avg -------------------------------------------')
+        print('end moving avg -------------------------------------------')
+        print(tmp_df)
 
         majority_preds = torch.tensor(tmp_df['preds'].values.tolist())
         majority_labels = torch.tensor(tmp_df['labels'].values.tolist())

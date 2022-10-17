@@ -85,24 +85,25 @@ class AbstractDataModule(pl.LightningDataModule):
         self.data = pd.read_pickle(self.df_path)
 
     def setup(self, stage: Optional[str] = None) -> None:
-        if not self.splits:
-            self.split_data()
+        self.split_data()
 
     def split_data(self):
         if self.k_folds < 2:
-            train_series = self.get_random_series(self.data, proportion=self.train_vs_rest_size)
-            non_train_data = self.data.loc[~self.data[self.series_name].isin(train_series)]
-            val_series = self.get_random_series(non_train_data, proportion=self.val_vs_test_size)
-            test_series = list(set(self.subjects) - set(train_series) - set(val_series))
-            self.splits['train'] = self.data.index[self.data[self.subject_name].isin(train_series)]
-            self.splits['val'] = self.data.index[self.data[self.subject_name].isin(val_series)]
-            self.splits['test'] = self.data.index[self.data[self.subject_name].isin(test_series)]
+            if not self.splits:
+                train_series = self.get_random_series(self.data, proportion=self.train_vs_rest_size)
+                non_train_data = self.data.loc[~self.data[self.series_name].isin(train_series)]
+                val_series = self.get_random_series(non_train_data, proportion=self.val_vs_test_size)
+                test_series = list(set(self.subjects) - set(train_series) - set(val_series))
+                self.splits['train'] = self.data.index[self.data[self.subject_name].isin(train_series)]
+                self.splits['val'] = self.data.index[self.data[self.subject_name].isin(val_series)]
+                self.splits['test'] = self.data.index[self.data[self.subject_name].isin(test_series)]
         else:
-            tmp_data = self.data
-            for f in range(self.k_folds):
-                series = self.get_random_series(tmp_data, proportion=1. / (self.k_folds - f))
-                self.folds.append(series)
-                tmp_data = tmp_data.loc[~tmp_data[self.series_name].isin(series)]
+            if not self.splits:
+                tmp_data = self.data
+                for f in range(self.k_folds):
+                    series = self.get_random_series(tmp_data, proportion=1. / (self.k_folds - f))
+                    self.folds.append(series)
+                    tmp_data = tmp_data.loc[~tmp_data[self.series_name].isin(series)]
 
             self.splits['train'] = self.data.index[self.data[self.series_name].isin(
                 [item

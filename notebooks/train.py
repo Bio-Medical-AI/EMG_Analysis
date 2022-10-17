@@ -21,14 +21,14 @@ def main():
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR
     optimizer = torch.optim.AdamW
 
-    data_module_capgmyo = CapgMyoDataModule(
-        batch_size=1000,
-        k_folds=10,
-        train_transforms=transform,
-        val_transforms=transform,
-        test_transforms=transform,
-        seed=seed
-    )
+    # data_module_capgmyo = CapgMyoDataModule(
+    #     batch_size=1000,
+    #     k_folds=10,
+    #     train_transforms=transform,
+    #     val_transforms=transform,
+    #     test_transforms=transform,
+    #     seed=seed
+    # )
 
     # partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
     #                              optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
@@ -94,8 +94,8 @@ def main():
     #                                max_epochs=10, seed=seed, time_window=40, time_step=1)
 
     data_module_ninapro = NinaProDataModule(
-        batch_size=10000,
-        num_workers=32,
+        batch_size=100000,
+        num_workers=64,
         k_folds=10,
         train_transforms=transform,
         val_transforms=transform,
