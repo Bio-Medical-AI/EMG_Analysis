@@ -25,15 +25,16 @@ class SpaceTimeDataset(AbstractDataset):
         self.locations = self.locations.tolist()
         self.window_length = window_length
         self.samples_amount = len(self.locations)
-        self.records = [np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist()) for index in range(self.samples_amount)]
+        # self.records = [
+        #     np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist())
+        #     for index in range(self.samples_amount)]
 
     def __getitem__(self, index: int) -> dict:
         label = self.labels.iloc[self.locations[index]]
         series = self.series.iloc[self.locations[index]]
-        if self.transform is None:
-            data = self.records[index]
-        else:
-            data = self.transform(self.records[index]).float()
+        data = np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist())
+        if self.transform is not None:
+            data = self.transform(data).float()
         return {'data': data, 'label': label, 'series': series, 'index': index}
 
     def __len__(self) -> int:

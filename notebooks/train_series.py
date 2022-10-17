@@ -27,89 +27,61 @@ def main():
         train_transforms=transform,
         val_transforms=transform,
         test_transforms=transform,
-        seed=seed
+        seed=seed,
+        series_length=10
     )
 
     partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
                                  optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 lr_lambda=lr_lambda, time_window=40, time_step=1)
+                                 lr_lambda=lr_lambda, time_window=30, time_step=1)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series Chinese CapgMyo",
                          max_epochs=28, seed=seed)
 
     partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=40, time_step=1)
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=30, time_step=1)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series CapgMyo",
                          max_epochs=150, callbacks=callbacks, seed=seed)
 
-    model_files = [f'series_capgmyo_{k}_fold.pt' for k in range(10)]
-    xgb_cross_val_experiments_file(data_module=data_module_capgmyo, model_files=model_files, name="Series XGB CapgMyo",
-                                   max_epochs=2, seed=seed, time_window=40, time_step=1)
-
     partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
                                  optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 lr_lambda=lr_lambda, time_window=150, time_step=1)
+                                 lr_lambda=lr_lambda, time_window=140, time_step=1)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series Chinese CapgMyo 150",
                          max_epochs=28, seed=seed)
 
     partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=150, time_step=1)
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=140, time_step=1)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series CapgMyo 150",
                          max_epochs=150, callbacks=callbacks, seed=seed)
 
-    model_files = [f'series_capgmyo_150_{k}_fold.pt' for k in range(10)]
-    xgb_cross_val_experiments_file(data_module=data_module_capgmyo, model_files=model_files, name="Series XGB CapgMyo 150",
-                                   max_epochs=2, seed=seed, time_window=150, time_step=1)
-
-    partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
-                                 optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 lr_lambda=lr_lambda, time_window=150, time_step=10)
-    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
-                         name="Series Chinese CapgMyo 150-10", max_epochs=28, seed=seed)
-
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=150, time_step=10)
-    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series CapgMyo 150-10",
-                         max_epochs=150, callbacks=callbacks, seed=seed)
-
-    model_files = [f'series_capgmyo_150-10_{k}_fold.pt' for k in range(10)]
-    xgb_cross_val_experiments_file(data_module=data_module_capgmyo, model_files=model_files, name="Series XGB CapgMyo 150-10",
-                                   max_epochs=2, seed=seed, time_window=150, time_step=10)
-
     data_module_myoarmband = MyoArmbandDataModule(
-        batch_size=10000,
+        batch_size=1000,
         num_workers=8,
         train_transforms=transform,
         val_transforms=transform,
         test_transforms=transform,
         k_folds=6,
-        seed=seed
+        seed=seed,
+        series_length=1
     )
     partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=40, time_step=1)
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=30, time_step=1)
     cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier, name="Series MyoArmband",
                          max_epochs=150, callbacks=callbacks, seed=seed)
 
-    model_files = [f'series_myoarmband_{k}_fold.pt' for k in range(10)]
-    xgb_cross_val_experiments_file(data_module=data_module_myoarmband, model_files=model_files, name="Series XGB MyoArmband",
-                                   max_epochs=2, seed=seed, time_window=40, time_step=1)
-
     data_module_ninapro = NinaProDataModule(
-        batch_size=1000,
+        batch_size=100,
         k_folds=10,
         train_transforms=transform,
         val_transforms=transform,
         test_transforms=transform,
-        seed=seed
+        seed=seed,
+        series_length=1
     )
 
     partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=28, time_step=1)
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=18, time_step=1)
     cross_val_experiment(data_module=data_module_ninapro, partial_classifier=partial_classifier, name="Series NinaPro",
                          max_epochs=150, callbacks=callbacks, seed=seed)
-
-    model_files = [f'series_ninapro_{k}_fold.pt' for k in range(10)]
-    xgb_cross_val_experiments_file(data_module=data_module_ninapro, model_files=model_files, name="Series XGB NinaPro",
-                                   max_epochs=2, seed=seed, time_window=28, time_step=1)
 
 
 if __name__ == '__main__':

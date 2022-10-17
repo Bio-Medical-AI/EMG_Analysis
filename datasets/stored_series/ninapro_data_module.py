@@ -25,7 +25,8 @@ class NinaProDataModule(AbstractDataModule):
                  k_folds: int = 0,
                  dataset: type = partial(SpaceTimeDataset, window_length=10, window_step=1),
                  split_method: str = 'default',
-                 series_length: int = 10):
+                 series_length: int = 10,
+                 window_step: int = 1):
         df_path = os.path.join(SERIES_FOLDER, 'NinaPro', 'NinaPro.pkl')
         if not os.path.isfile(df_path):
             prepare_ninapro(prepare_dataframe_dataset, SERIES_FOLDER)
@@ -49,7 +50,7 @@ class NinaProDataModule(AbstractDataModule):
             shuffle_train,
             seed,
             k_folds,
-            dataset,
+            partial(SpaceTimeDataset, window_length=series_length, window_step=window_step),
             split_method)
 
     def prepare_data(self) -> None:
