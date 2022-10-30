@@ -94,8 +94,8 @@ def main():
     #                                max_epochs=10, seed=seed, time_window=40, time_step=1)
 
     data_module_ninapro = NinaProDataModule(
-        batch_size=100000,
-        num_workers=64,
+        batch_size=1000,
+        num_workers=8,
         k_folds=10,
         train_transforms=transform,
         val_transforms=transform,

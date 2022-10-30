@@ -50,7 +50,7 @@ class CapgMyoDataModule(AbstractDataModule):
             shuffle_train,
             seed,
             k_folds,
-            partial(SpaceTimeDataset, window_length=series_length, window_step=window_step),
+            partial(dataset, window_length=series_length, window_step=window_step),
             split_method)
 
     def prepare_data(self) -> None:

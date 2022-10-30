@@ -18,6 +18,7 @@ class LightningXGBClassifier(Classifier):
                  tree_method: str = 'hist',
                  time_window: int = 100,
                  time_step: int = 10,
+                 n_jobs: int = 16,
                  **kwargs
                  ):
         super(LightningXGBClassifier, self).__init__(
@@ -26,7 +27,8 @@ class LightningXGBClassifier(Classifier):
             time_step=time_step,
             **kwargs
         )
-        self.xgbmodel = XGBClassifier(objective=objective, num_class=num_class, tree_method=tree_method, gpu_id=0)
+        self.xgbmodel = XGBClassifier(objective=objective, num_class=num_class, tree_method=tree_method, n_jobs=n_jobs,
+                                      gpu_id=0)
         self.criterion = criterion
 
     def forward(self, x: Tensor) -> Tensor:

@@ -1,5 +1,6 @@
 import math
 import os
+from functools import partial
 from typing import Dict, Optional
 
 import pandas as pd
@@ -35,7 +36,7 @@ class AbstractDataModule(pl.LightningDataModule):
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type = AbstractDataset,
+                 dataset: type or partial = AbstractDataset,
                  split_method: str = 'default'
                  ):
         super(AbstractDataModule, self).__init__()

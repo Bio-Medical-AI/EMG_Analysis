@@ -23,7 +23,7 @@ class MyoArmbandDataModule(AbstractDataModule):
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type = partial(SpaceTimeDataset, window_length=10, window_step=1),
+                 dataset: type = SpaceTimeDataset,
                  split_method: str = 'subject',
                  series_length: int = 10,
                  window_step: int = 1):
@@ -50,7 +50,7 @@ class MyoArmbandDataModule(AbstractDataModule):
             shuffle_train,
             seed,
             k_folds,
-            partial(SpaceTimeDataset, window_length=series_length, window_step=window_step),
+            partial(dataset, window_length=series_length, window_step=window_step),
             split_method)
 
     def prepare_data(self) -> None:

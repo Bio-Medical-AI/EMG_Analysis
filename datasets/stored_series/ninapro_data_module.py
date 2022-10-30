@@ -5,6 +5,7 @@ from torchvision.transforms import Compose, ToTensor
 from functools import partial
 from datasets import prepare_ninapro, prepare_dataframe_dataset, AbstractDataModule, SpaceTimeDataset
 from definitions import SERIES_FOLDER
+import typing
 
 
 class NinaProDataModule(AbstractDataModule):
@@ -23,7 +24,7 @@ class NinaProDataModule(AbstractDataModule):
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type = partial(SpaceTimeDataset, window_length=10, window_step=1),
+                 dataset: type = SpaceTimeDataset,
                  split_method: str = 'default',
                  series_length: int = 10,
                  window_step: int = 1):
@@ -50,7 +51,7 @@ class NinaProDataModule(AbstractDataModule):
             shuffle_train,
             seed,
             k_folds,
-            partial(SpaceTimeDataset, window_length=series_length, window_step=window_step),
+            partial(dataset, window_length=series_length, window_step=window_step),
             split_method)
 
     def prepare_data(self) -> None:
