@@ -3,11 +3,13 @@ from typing import Any, Dict, List
 import pandas as pd
 import pytorch_lightning as pl
 import torch
+from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.utilities.types import STEP_OUTPUT, EPOCH_OUTPUT
 from torch import Tensor
 import torch.nn as nn
 from torch.optim.lr_scheduler import LambdaLR
-from torchmetrics.functional import accuracy, f1_score, precision, specificity
+import statistics
+from torchmetrics import MetricCollection
 
 
 class Classifier(pl.LightningModule):
@@ -16,21 +18,26 @@ class Classifier(pl.LightningModule):
                  optimizer: type(torch.optim.Optimizer) = torch.optim.AdamW,
                  lr_scheduler: type(torch.optim.lr_scheduler) = torch.optim.lr_scheduler.ReduceLROnPlateau,
                  criterion: nn.Module = nn.CrossEntropyLoss(),
-                 time_window: int = 150,
-                 time_step: int = 10,
+                 time_window: List[int] = [40],
+                 time_step: List[int] = [1],
+                 metrics: MetricCollection = MetricCollection([]),
                  **kwargs):
         super().__init__()
         self.save_hyperparameters(ignore=['model',
                                           'criterion',
                                           'lr_lambda',
                                           'lr_scheduler',
-                                          'optimizer'])
+                                          'optimizer',
+                                          'metrics',
+                                          'time_window',
+                                          'time_step'])
         self.model = model
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.criterion = criterion
         self.time_window = time_window
         self.time_step = time_step
+        self.metrics = metrics
         self.lr_lambda = kwargs.get('lr_lambda', None)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -56,55 +63,44 @@ class Classifier(pl.LightningModule):
     def training_step(self, train_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         results = self._step(train_batch)
         logs = {'loss': results['loss']}
+        logs = self._add_prefix_to_metrics('test/', logs)
         self.log_dict(logs)
         return results
 
     def training_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
         results = self._epoch_end(outputs)
-        self.log_dict({
-            'train_accuracy': results['acc'],
-            'train_f1': results['f1'],
-            'train_speccificity': results['spec'],
-            'train_precision': results['prec']})
+        logs = self._add_prefix_to_metrics('test/', results['measurements'])
+        self.log_dict(logs)
 
     def validation_step(self, val_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         results = self._step(val_batch)
         return results
 
-    def validation_epoch_end(self, validation_step_outputs: EPOCH_OUTPUT):
+    def validation_epoch_end(self, validation_step_outputs: EPOCH_OUTPUT) -> None:
         results = self._epoch_end(validation_step_outputs)
         results = self._eval_epoch_end(results)
-
-        logs = {'val_majority_voting_accuracy': results['majority_acc'],
-                'val_majority_voting_f1': results['majority_f1'],
-                'val_majority_voting_precision': results['majority_prec'],
-                'val_majority_voting_specificity': results['majority_spec'],
-                'val_precision': results['prec'],
-                'val_specificity': results['spec'],
-                'val_accuracy': results['acc'],
-                'val_f1': results['f1']
-                }
+        logs = self._add_prefix_to_metrics('val/', results)
         self.log_dict(logs)
 
     def test_step(self, test_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         results = self._step(test_batch)
         return results
 
-    def test_epoch_end(self, test_step_outputs: EPOCH_OUTPUT):
+    def test_epoch_end(self, test_step_outputs: EPOCH_OUTPUT) -> None:
         results = self._epoch_end(test_step_outputs)
         results = self._eval_epoch_end(results)
+        logs = self._add_prefix_to_metrics('test/', results)
 
-        logs = {'test_majority_voting_accuracy': results['majority_acc'],
-                'test_majority_voting_f1': results['majority_f1'],
-                'test_majority_voting_precision': results['majority_prec'],
-                'test_majority_voting_specificity': results['majority_spec'],
-                'test_precision': results['prec'],
-                'test_specificity': results['spec'],
-                'test_accuracy': results['acc'],
-                'test_f1': results['f1']
-                }
         self.log_dict(logs)
         self.trainer.logger.finalize('success')
+
+    def _add_prefix_to_metrics(self, prefix: str, logs: Dict[str, Tensor]) -> Dict[str, Tensor]:
+        logs = {(prefix + key): value for key, value in logs.items()}
+        return logs
+
+    def _calculate_metrics(self, preds: Tensor, targets: Tensor) -> Dict[str, Tensor or List]:
+        metrics = self.metrics(preds, targets)
+        return metrics
 
     def predict_step(self, predict_batch: Tensor, batch_idx: int, dataloader_idx=0) -> STEP_OUTPUT:
         return self.model(predict_batch)
@@ -123,17 +119,44 @@ class Classifier(pl.LightningModule):
                 'series': series,
                 'index': index}
 
-    def _moving_average(self, df: pd.DataFrame) -> pd.DataFrame:
-        if df.shape[0] >= self.time_window:
+    def _moving_average(self, df: pd.DataFrame, window: int, step: int) -> STEP_OUTPUT:
+        if df.shape[0] >= window:
             preds = []
             labels = []
-            for i in range((df.shape[0] - self.time_window) // self.time_step + 1):
-                tmp = df.iloc[(i * self.time_step):(i * self.time_step + self.time_window)]
+            for i in range((df.shape[0] - window) // step + 1):
+                tmp = df.iloc[(i * step):(i * step + window)]
                 preds.append(tmp['preds'].values.tolist())
                 labels.append(tmp['labels'].head(1).item())
-            return pd.DataFrame({'preds': torch.mode(torch.Tensor(preds))[0].tolist(), 'labels': labels})
+            return {'preds_list': preds, 'labels_list': labels}
         else:
-            return pd.DataFrame({'preds': [df['preds'].mode()[0].item()], 'labels': [df['labels'].mode()[0].item()]})
+            return {'preds': df['preds'].mode()[0].item(), 'labels': df['labels'].head(1).item()}
+
+    def _majority_voting(self, df: pd.DataFrame, window: int, step: int) -> STEP_OUTPUT:
+        preds = []
+        labels = []
+        preds_list = []
+        labels_list = []
+
+        for series in df['series'].unique().tolist():
+            results = self._moving_average(df.loc[df['series'] == series], window, step)
+            if 'preds_list' in results.keys():
+                preds_list += results['preds_list']
+                labels_list += results['labels_list']
+            else:
+                preds.append(results['preds'])
+                labels.append(results['labels'])
+        preds += torch.mode(torch.Tensor(preds_list))[0].int().tolist()
+        labels += labels_list
+
+        majority_preds = torch.tensor(preds, device=self.device)
+        majority_labels = torch.tensor(labels, device=self.device)
+
+        # majority_acc = accuracy(majority_preds, majority_labels, average='micro')
+        # majority_f1 = f1_score(majority_preds, majority_labels, average='macro', num_classes=self.model.num_classes)
+        # majority_prec = precision(majority_preds, majority_labels, average='macro', num_classes=self.model.num_classes)
+        # majority_spec = specificity(majority_preds, majority_labels, average='macro',
+        #                             num_classes=self.model.num_classes)
+        return self._add_prefix_to_metrics('majority_voting_', self._calculate_metrics(majority_preds, majority_labels))
 
     def _epoch_end(self, step_outputs: EPOCH_OUTPUT) -> STEP_OUTPUT:
         preds = self._connect_epoch_results(step_outputs, 'preds')
@@ -141,61 +164,29 @@ class Classifier(pl.LightningModule):
         series = self._connect_epoch_results(step_outputs, 'series')
         index = self._connect_epoch_results(step_outputs, 'index')
         loss = [step['loss'] for step in step_outputs]
-        acc = accuracy(preds, labels, average='micro')
-        f1 = f1_score(preds, labels, average='macro', num_classes=self.model.num_classes)
-        prec = precision(preds, labels, average='macro', num_classes=self.model.num_classes)
-        spec = specificity(preds, labels, average='macro', num_classes=self.model.num_classes)
-        return {'loss': loss,
-                'preds': preds,
-                'labels': labels,
-                'series': series,
-                'index': index,
-                'acc': acc,
-                'f1': f1,
-                'prec': prec,
-                'spec': spec}
+        # acc = accuracy(preds, labels, average='micro')
+        # f1 = f1_score(preds, labels, average='macro', num_classes=self.model.num_classes)
+        # prec = precision(preds, labels, average='macro', num_classes=self.model.num_classes)
+        # spec = specificity(preds, labels, average='macro', num_classes=self.model.num_classes)
+        output = {'preds': preds,
+                  'labels': labels,
+                  'series': series,
+                  'index': index,
+                  'loss': loss}
+        measurements = self._calculate_metrics(preds.to(self.device), labels.to(self.device))
+        return {'output': output, 'measurements': measurements}
 
     def _eval_epoch_end(self, step_outputs: STEP_OUTPUT) -> STEP_OUTPUT:
-        tmp_dict = {
-            'preds': step_outputs['preds'],
-            'labels': step_outputs['labels'],
-            'series': step_outputs['series'],
-            'index': step_outputs['index'],
-        }
-        print('sort -------------------------------------------')
-        print('sort -------------------------------------------')
-        df = pd.DataFrame(tmp_dict).sort_values(by=['index'])
-        print('end sort -------------------------------------------')
-        print('end sort -------------------------------------------')
-        tmp_df = pd.DataFrame(columns=['preds', 'labels'])
-        print('moving avg -------------------------------------------')
-        print('moving avg -------------------------------------------')
-        for series in df['series'].unique().tolist():
-            tmp_df = tmp_df.append(self._moving_average(df.loc[df['series'] == series]), ignore_index=True)
-        print('end moving avg -------------------------------------------')
-        print('end moving avg -------------------------------------------')
-        print(tmp_df)
+        output = step_outputs['output']
+        measurements = step_outputs['measurements']
+        measurements.update({'loss': statistics.fmean(output['loss'])})
+        output.pop('loss', None)
+        df = pd.DataFrame(output).sort_values(by=['index'])
+        for window, step in zip(self.time_window, self.time_step):
+            results = self._majority_voting(df, window, step)
+            measurements.update(self._add_prefix_to_metrics(f'{window}_{step}/', results))
 
-        majority_preds = torch.tensor(tmp_df['preds'].values.tolist())
-        majority_labels = torch.tensor(tmp_df['labels'].values.tolist())
-        majority_acc = accuracy(majority_preds, majority_labels, average='micro')
-        majority_f1 = f1_score(majority_preds, majority_labels, average='macro', num_classes=self.model.num_classes)
-        majority_prec = precision(majority_preds, majority_labels, average='macro', num_classes=self.model.num_classes)
-        majority_spec = specificity(majority_preds, majority_labels, average='macro',
-                                    num_classes=self.model.num_classes)
-        return {'loss': step_outputs['loss'],
-                'acc': step_outputs['acc'],
-                'f1': step_outputs['f1'],
-                'prec': step_outputs['prec'],
-                'spec': step_outputs['spec'],
-                'preds': step_outputs['preds'],
-                'labels': step_outputs['labels'],
-                'majority_preds': majority_preds,
-                'majority_labels': majority_labels,
-                'majority_prec': majority_prec,
-                'majority_spec': majority_spec,
-                'majority_acc': majority_acc,
-                'majority_f1': majority_f1}
+        return measurements
 
     def _connect_epoch_results(self, step_outputs: List[Dict[str, Tensor or Any]], key: str):
         to_concat = []

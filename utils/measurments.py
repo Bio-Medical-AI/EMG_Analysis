@@ -37,9 +37,3 @@ def measure_eval_time(model: nn.Module, dummy_input: torch.Tensor):
     std_syn = np.std(timings)
     return mean_syn, std_syn
 
-
-def confusion_matrix():
-    target = torch.tensor([2, 1, 0, 0])
-    preds = torch.tensor([2, 1, 0, 1])
-    confmat = ConfusionMatrix(num_classes=3)
-    confmat(preds, target)

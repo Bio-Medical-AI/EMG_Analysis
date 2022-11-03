@@ -1,4 +1,8 @@
+from pytorch_lightning.callbacks import ModelCheckpoint
+from torchmetrics import MetricCollection, Accuracy, Specificity, Precision, F1Score
+
 from datasets.stored_series import CapgMyoDataModule, MyoArmbandDataModule, NinaProDataModule
+from definitions import MODELS_FOLDER
 from models import Classifier
 import torch
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -17,7 +21,8 @@ def main():
         ToTensor(),
         Normalize(0, 1)
     ])
-    callbacks = [EarlyStopping(monitor='val_accuracy', patience=7, mode='max')]
+    callbacks = [partial(ModelCheckpoint, monitor='val/loss', dirpath=MODELS_FOLDER),
+                 partial(EarlyStopping, monitor='val/Accuracy', patience=7, mode='max')]
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR
     optimizer = torch.optim.AdamW
 
@@ -31,27 +36,23 @@ def main():
         series_length=10
     )
 
-    partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
-                                 optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 lr_lambda=lr_lambda, time_window=30, time_step=1)
-    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series Chinese CapgMyo",
-                         max_epochs=28, seed=seed)
+    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_capgmyo.num_classes),
+                                Specificity(average='macro', num_classes=data_module_capgmyo.num_classes),
+                                Precision(average='macro', num_classes=data_module_capgmyo.num_classes),
+                                F1Score(average='macro', num_classes=data_module_capgmyo.num_classes)]).to(
+        torch.device("cuda", 0))
 
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=30, time_step=1)
+    partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
+                                 optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                 lr_lambda=lr_lambda, time_window=[30, 140], time_step=[1, 1], metrics=metrics)
+    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
+                         name="Series Chinese CapgMyo", max_epochs=28, seed=seed, model_checkpoint_index=0)
+
+    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[30, 140], time_step=[1, 1],
+                                 metrics=metrics)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series CapgMyo",
-                         max_epochs=150, callbacks=callbacks, seed=seed)
-
-    partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
-                                 optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 lr_lambda=lr_lambda, time_window=140, time_step=1)
-    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series Chinese CapgMyo 150",
-                         max_epochs=28, seed=seed)
-
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=140, time_step=1)
-    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series CapgMyo 150",
-                         max_epochs=150, callbacks=callbacks, seed=seed)
+                         max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
 
     data_module_myoarmband = MyoArmbandDataModule(
         batch_size=1000,
@@ -63,14 +64,24 @@ def main():
         seed=seed,
         series_length=1
     )
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=30, time_step=1)
-    cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier, name="Series MyoArmband",
-                         max_epochs=150, callbacks=callbacks, seed=seed)
+
+    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_myoarmband.num_classes),
+                                Specificity(average='macro', num_classes=data_module_myoarmband.num_classes),
+                                Precision(average='macro', num_classes=data_module_myoarmband.num_classes),
+                                F1Score(average='macro', num_classes=data_module_myoarmband.num_classes)]).to(
+        torch.device("cuda", 0))
+
+    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[30], time_step=[1],
+                                 metrics=metrics)
+    cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier,
+                         name="Series MyoArmband", max_epochs=150, callbacks=callbacks, seed=seed,
+                         model_checkpoint_index=0)
 
     data_module_ninapro = NinaProDataModule(
         batch_size=100,
         k_folds=10,
+        num_workers=4,
         train_transforms=transform,
         val_transforms=transform,
         test_transforms=transform,
@@ -78,10 +89,17 @@ def main():
         series_length=1
     )
 
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=18, time_step=1)
+    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_ninapro.num_classes),
+                                Specificity(average='macro', num_classes=data_module_ninapro.num_classes),
+                                Precision(average='macro', num_classes=data_module_ninapro.num_classes),
+                                F1Score(average='macro', num_classes=data_module_ninapro.num_classes)]).to(
+        torch.device("cuda", 0))
+
+    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[18], time_step=[1],
+                                 metrics=metrics)
     cross_val_experiment(data_module=data_module_ninapro, partial_classifier=partial_classifier, name="Series NinaPro",
-                         max_epochs=150, callbacks=callbacks, seed=seed)
+                         max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
 
 
 if __name__ == '__main__':

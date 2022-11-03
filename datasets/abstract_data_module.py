@@ -88,7 +88,7 @@ class AbstractDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         self.split_data()
 
-    def split_data(self):
+    def split_data(self) -> None:
         if self.k_folds < 2:
             if not self.splits:
                 train_series = self.get_random_series(self.data, proportion=self.train_vs_rest_size)

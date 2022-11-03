@@ -1,5 +1,7 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
+from pytorch_lightning.callbacks import ModelCheckpoint
+from torchmetrics import MetricCollection
 from xgboost import XGBClassifier
 
 import torch
@@ -16,8 +18,9 @@ class LightningXGBClassifier(Classifier):
                  objective: str = 'multi:softprob',
                  criterion: nn.Module = nn.CrossEntropyLoss(),
                  tree_method: str = 'hist',
-                 time_window: int = 100,
-                 time_step: int = 10,
+                 time_window: List[int] = [30],
+                 time_step: List[int] = [1],
+                 metrics: MetricCollection = MetricCollection([]),
                  n_jobs: int = 16,
                  **kwargs
                  ):
@@ -25,6 +28,7 @@ class LightningXGBClassifier(Classifier):
             model=model,
             time_window=time_window,
             time_step=time_step,
+            metrics=metrics,
             **kwargs
         )
         self.xgbmodel = XGBClassifier(objective=objective, num_class=num_class, tree_method=tree_method, n_jobs=n_jobs,

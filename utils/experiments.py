@@ -1,5 +1,8 @@
 from typing import List
 
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from torchmetrics import MetricCollection
+
 from datasets import AbstractDataModule
 from models import OriginalModel
 import pytorch_lightning as pl
@@ -15,17 +18,21 @@ import copy
 
 
 def cross_val_experiment(data_module: AbstractDataModule, partial_classifier: partial, name: str, max_epochs: int,
-                         callbacks: list = None, project: str = "EMG Armband", save_dir: str = 'wandb_logs',
-                         k_folds: int = 10, seed: int = 0):
+                         callbacks: list = None, model_checkpoint_index: int = None, project: str = "EMG Armband",
+                         save_dir: str = 'wandb_logs', k_folds: int = 10, seed: int = 0):
     pl.seed_everything(seed, workers=True)
     parameters = data_module.get_data_parameters()
     for k in tqdm(range(k_folds)):
         classifier = partial_classifier(
             OriginalModel(**parameters))
         logger = WandbLogger(project=project, name=name, save_dir=save_dir)
+        callbacks_initialized = [callback() for callback in callbacks]
         trainer = pl.Trainer(gpus=-1, max_epochs=max_epochs, logger=logger, accelerator="gpu",
-                             callbacks=copy.deepcopy(callbacks))
+                             callbacks=callbacks_initialized)
         trainer.fit(model=classifier, datamodule=data_module)
+        if model_checkpoint_index is not None:
+            classifier = classifier.load_from_checkpoint(
+                checkpoint_path=callbacks_initialized[model_checkpoint_index].best_model_path)
         trainer.test(model=classifier, datamodule=data_module)
         wandb.finish()
         torch.save(classifier.model.state_dict(),
@@ -47,7 +54,8 @@ def xgb_cross_val_experiments(data_module: AbstractDataModule, partial_classifie
 
 def xgb_cross_val_experiments_file(data_module: AbstractDataModule, model_files: List[str], name: str,
                                    max_epochs: int, project: str = "EMG Armband", save_dir: str = 'wandb_logs',
-                                   k_folds: int = 10, seed: int = 0, time_window: int = 150, time_step: int = 10):
+                                   k_folds: int = 10, seed: int = 0, time_window: int = 150, time_step: int = 10,
+                                   measurements: MetricCollection = MetricCollection([])):
     pl.seed_everything(seed, workers=True)
     parameters = data_module.get_data_parameters()
     model = OriginalModel(**parameters)
@@ -55,6 +63,7 @@ def xgb_cross_val_experiments_file(data_module: AbstractDataModule, model_files:
         model.load_state_dict(torch.load(os.path.join(MODELS_FOLDER, model_files[k])))
         model.model = model.model[0:26]
         partial_classifier = partial(LightningXGBClassifier, model, data_module.num_classes, monitor='val_accuracy',
-                                     tree_method='gpu_hist', time_window=time_window, time_step=time_step)
+                                     tree_method='gpu_hist', time_window=time_window, time_step=time_step,
+                                     measurements=measurements)
         xgb_cross_val_experiments(data_module=data_module, partial_classifier=partial_classifier, name=name,
                                   max_epochs=max_epochs, project=project, save_dir=save_dir, k=k)
