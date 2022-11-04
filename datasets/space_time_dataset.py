@@ -32,7 +32,8 @@ class SpaceTimeDataset(AbstractDataset):
     def __getitem__(self, index: int) -> dict:
         label = self.labels.iloc[self.locations[index]]
         series = self.series.iloc[self.locations[index]]
-        data = np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist())
+        data = np.squeeze(
+            np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist()))
         if self.transform is not None:
             data = self.transform(data).float()
         return {'data': data, 'label': label, 'series': series, 'index': index}

@@ -26,11 +26,14 @@ def cross_val_experiment(data_module: AbstractDataModule, partial_classifier: pa
         classifier = partial_classifier(
             OriginalModel(**parameters))
         logger = WandbLogger(project=project, name=name, save_dir=save_dir)
-        callbacks_initialized = [callback() for callback in callbacks]
+        if callbacks:
+            callbacks_initialized = [callback() for callback in callbacks]
+        else:
+            callbacks_initialized = None
         trainer = pl.Trainer(gpus=-1, max_epochs=max_epochs, logger=logger, accelerator="gpu",
                              callbacks=callbacks_initialized)
         trainer.fit(model=classifier, datamodule=data_module)
-        if model_checkpoint_index is not None:
+        if model_checkpoint_index is not None and bool(callbacks):
             classifier = classifier.load_from_checkpoint(
                 checkpoint_path=callbacks_initialized[model_checkpoint_index].best_model_path)
         trainer.test(model=classifier, datamodule=data_module)

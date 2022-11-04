@@ -25,32 +25,32 @@ def main():
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR
     optimizer = torch.optim.AdamW
 
-    data_module_capgmyo = CapgMyoDataModule(
-        batch_size=1000,
-        k_folds=10,
-        train_transforms=transform,
-        val_transforms=transform,
-        test_transforms=transform,
-        seed=seed
-    )
-
-    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_capgmyo.num_classes),
-                                Specificity(average='macro', num_classes=data_module_capgmyo.num_classes),
-                                Precision(average='macro', num_classes=data_module_capgmyo.num_classes),
-                                F1Score(average='macro', num_classes=data_module_capgmyo.num_classes)]).to(
-        torch.device("cuda", 0))
-
+    # data_module_capgmyo = CapgMyoDataModule(
+    #     batch_size=1000,
+    #     k_folds=10,
+    #     train_transforms=transform,
+    #     val_transforms=transform,
+    #     test_transforms=transform,
+    #     seed=seed
+    # )
+    #
+    # metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_capgmyo.num_classes),
+    #                             Specificity(average='macro', num_classes=data_module_capgmyo.num_classes),
+    #                             Precision(average='macro', num_classes=data_module_capgmyo.num_classes),
+    #                             F1Score(average='macro', num_classes=data_module_capgmyo.num_classes)]).to(
+    #     torch.device("cuda", 0))
+    #
     # partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
-    #                              optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_Accuracy',
+    #                              optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
     #                              lr_lambda=lr_lambda, time_window=[40], time_step=[1], metrics=metrics)
     # cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Chinese CapgMyo",
-    #                      max_epochs=28, seed=seed, model_checkpoint_index=0)
+    #                      max_epochs=28, seed=seed, model_checkpoint_index=None)
     #
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_Accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[40], time_step=[1],
-                                 metrics=metrics)
-    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="CapgMyo",
-                         max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
+    # partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+    #                              sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[40], time_step=[1],
+    #                              metrics=metrics)
+    # cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="CapgMyo",
+    #                      max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
 
     # model_files = [f'capgmyo_{k}_fold.pt' for k in range(10)]
     # xgb_cross_val_experiments_file(data_module=data_module_capgmyo, model_files=model_files, name="XGB CapgMyo",
@@ -73,7 +73,7 @@ def main():
     #                             F1Score(average='macro', num_classes=data_module_myoarmband.num_classes)]).to(
     #         torch.device("cuda", 0))
 
-    # partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_Accuracy',
+    # partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
     #                              sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[40], time_step=[1],
     #                              metrics=metrics)
     # cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier, name="MyoArmband",
@@ -83,27 +83,27 @@ def main():
     # xgb_cross_val_experiments_file(data_module=data_module_myoarmband, model_files=model_files, name="XGB MyoArmband",
     #                                max_epochs=10, seed=seed, time_window=[40], time_step=[1], metrics=metrics)
 
-    # data_module_ninapro = NinaProDataModule(
-    #     batch_size=1000,
-    #     num_workers=4,
-    #     k_folds=10,
-    #     train_transforms=transform,
-    #     val_transforms=transform,
-    #     test_transforms=transform,
-    #     seed=seed
-    # )
-    #
-    # metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_ninapro.num_classes),
-    #                             Specificity(average='macro', num_classes=data_module_ninapro.num_classes),
-    #                             Precision(average='macro', num_classes=data_module_ninapro.num_classes),
-    #                             F1Score(average='macro', num_classes=data_module_ninapro.num_classes)]).to(
-    #         torch.device("cuda", 0))
-    #
-    # partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val_Accuracy',
-    #                              sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[28], time_step=[1],
-    #                              metrics=metrics)
-    # cross_val_experiment(data_module=data_module_ninapro, partial_classifier=partial_classifier, name="NinaPro",
-    #                      max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
+    data_module_ninapro = NinaProDataModule(
+        batch_size=5000,
+        num_workers=32,
+        k_folds=10,
+        train_transforms=transform,
+        val_transforms=transform,
+        test_transforms=transform,
+        seed=seed
+    )
+
+    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_ninapro.num_classes),
+                                Specificity(average='macro', num_classes=data_module_ninapro.num_classes),
+                                Precision(average='macro', num_classes=data_module_ninapro.num_classes),
+                                F1Score(average='macro', num_classes=data_module_ninapro.num_classes)]).to(
+            torch.device("cuda", 0))
+
+    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[28], time_step=[1],
+                                 metrics=metrics)
+    cross_val_experiment(data_module=data_module_ninapro, partial_classifier=partial_classifier, name="NinaPro",
+                         max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
 
     # model_files = [f'ninapro_{k}_fold.pt' for k in range(10)]
     # xgb_cross_val_experiments_file(data_module=data_module_ninapro, model_files=model_files, name="XGB NinaPro",

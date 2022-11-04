@@ -23,14 +23,15 @@ class Classifier(pl.LightningModule):
                  metrics: MetricCollection = MetricCollection([]),
                  **kwargs):
         super().__init__()
-        self.save_hyperparameters(ignore=['model',
-                                          'criterion',
-                                          'lr_lambda',
-                                          'lr_scheduler',
-                                          'optimizer',
-                                          'metrics',
-                                          'time_window',
-                                          'time_step'])
+        self.save_hyperparameters()
+        # ignore=['model',
+        #                                   'criterion',
+        #                                   'lr_lambda',
+        #                                   'lr_scheduler',
+        #                                   'optimizer',
+        #                                   'metrics',
+        #                                   'time_window',
+        #                                   'time_step'])
         self.model = model
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -63,13 +64,13 @@ class Classifier(pl.LightningModule):
     def training_step(self, train_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
         results = self._step(train_batch)
         logs = {'loss': results['loss']}
-        logs = self._add_prefix_to_metrics('test/', logs)
+        logs = self._add_prefix_to_metrics('train/', logs)
         self.log_dict(logs)
         return results
 
     def training_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
         results = self._epoch_end(outputs)
-        logs = self._add_prefix_to_metrics('test/', results['measurements'])
+        logs = self._add_prefix_to_metrics('train/', results['measurements'])
         self.log_dict(logs)
 
     def validation_step(self, val_batch: Dict[str, Tensor or Any], batch_idx: int) -> STEP_OUTPUT:
