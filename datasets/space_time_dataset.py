@@ -18,19 +18,17 @@ class SpaceTimeDataset(AbstractDataset):
         super().__init__(data_frame, transform, source_path_name, target_name, series_name)
 
         self.locations = pd.Index([])
-        for s in list(data_frame[series_name].unique()):
+        series_ids = list(data_frame[series_name].unique())
+        for idx, s in enumerate(series_ids):
             d = data_frame[data_frame[series_name] == s]
             d = d.drop(d.tail(window_length).index, inplace=False).iloc[::window_step, :].index
             self.locations = self.locations.union(d)
         self.locations = self.locations.tolist()
         self.window_length = window_length
         self.samples_amount = len(self.locations)
-        # self.records = [
-        #     np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist())
-        #     for index in range(self.samples_amount)]
 
     def __getitem__(self, index: int) -> dict:
-        label = self.labels.iloc[self.locations[index]]
+        label = int(self.labels.iloc[self.locations[index]])
         series = self.series.iloc[self.locations[index]]
         data = np.squeeze(
             np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist()))

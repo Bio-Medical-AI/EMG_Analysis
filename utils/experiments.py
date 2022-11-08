@@ -19,9 +19,10 @@ import copy
 
 def cross_val_experiment(data_module: AbstractDataModule, partial_classifier: partial, name: str, max_epochs: int,
                          callbacks: list = None, model_checkpoint_index: int = None, project: str = "EMG Armband",
-                         save_dir: str = 'wandb_logs', k_folds: int = 10, seed: int = 0):
+                         save_dir: str = 'wandb_logs', seed: int = 0):
     pl.seed_everything(seed, workers=True)
     parameters = data_module.get_data_parameters()
+    k_folds = data_module.k_folds
     for k in tqdm(range(k_folds)):
         classifier = partial_classifier(
             OriginalModel(**parameters))
@@ -57,9 +58,10 @@ def xgb_cross_val_experiments(data_module: AbstractDataModule, partial_classifie
 
 def xgb_cross_val_experiments_file(data_module: AbstractDataModule, model_files: List[str], name: str,
                                    max_epochs: int, project: str = "EMG Armband", save_dir: str = 'wandb_logs',
-                                   k_folds: int = 10, seed: int = 0, time_window: int = 150, time_step: int = 10,
+                                   seed: int = 0, time_window: int = 150, time_step: int = 10,
                                    measurements: MetricCollection = MetricCollection([])):
     pl.seed_everything(seed, workers=True)
+    k_folds = data_module.k_folds
     parameters = data_module.get_data_parameters()
     model = OriginalModel(**parameters)
     for k in tqdm(range(k_folds)):

@@ -20,6 +20,7 @@ class Classifier(pl.LightningModule):
                  criterion: nn.Module = nn.CrossEntropyLoss(),
                  time_window: List[int] = [40],
                  time_step: List[int] = [1],
+                 window_fix: List[int] = None,
                  metrics: MetricCollection = MetricCollection([]),
                  **kwargs):
         super().__init__()
@@ -38,6 +39,7 @@ class Classifier(pl.LightningModule):
         self.criterion = criterion
         self.time_window = time_window
         self.time_step = time_step
+        self.window_fix = window_fix
         self.metrics = metrics
         self.lr_lambda = kwargs.get('lr_lambda', None)
 
@@ -183,9 +185,14 @@ class Classifier(pl.LightningModule):
         measurements.update({'loss': statistics.fmean(output['loss'])})
         output.pop('loss', None)
         df = pd.DataFrame(output).sort_values(by=['index'])
-        for window, step in zip(self.time_window, self.time_step):
-            results = self._majority_voting(df, window, step)
-            measurements.update(self._add_prefix_to_metrics(f'{window}_{step}/', results))
+        if self.window_fix is None:
+            for window, step in zip(self.time_window, self.time_step):
+                results = self._majority_voting(df, window, step)
+                measurements.update(self._add_prefix_to_metrics(f'{window}_{step}/', results))
+        else:
+            for window, step, fix in zip(self.time_window, self.time_step, self.window_fix):
+                results = self._majority_voting(df, window, step)
+                measurements.update(self._add_prefix_to_metrics(f'{window + fix}_{step}/', results))
 
         return measurements
 

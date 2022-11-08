@@ -20,6 +20,7 @@ class LightningXGBClassifier(Classifier):
                  tree_method: str = 'hist',
                  time_window: List[int] = [30],
                  time_step: List[int] = [1],
+                 window_fix: List[int] = None,
                  metrics: MetricCollection = MetricCollection([]),
                  n_jobs: int = 16,
                  **kwargs
@@ -28,6 +29,7 @@ class LightningXGBClassifier(Classifier):
             model=model,
             time_window=time_window,
             time_step=time_step,
+            window_fix=window_fix,
             metrics=metrics,
             **kwargs
         )
