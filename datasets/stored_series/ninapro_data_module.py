@@ -3,12 +3,12 @@ import os
 import pandas as pd
 from torchvision.transforms import Compose, ToTensor
 from functools import partial
-from datasets import prepare_ninapro, prepare_dataframe_dataset, AbstractDataModule, SpaceTimeDataset
+from datasets import prepare_ninapro, prepare_dataframe_dataset, SeriesDataModule, SpaceTimeDataset
 from definitions import SERIES_FOLDER
 import typing
 
 
-class NinaProDataModule(AbstractDataModule):
+class NinaProDataModule(SeriesDataModule):
     def __init__(self,
                  train_transforms: Compose = ToTensor(),
                  val_transforms: Compose = ToTensor(),

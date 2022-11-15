@@ -33,7 +33,7 @@ def main():
         test_transforms=transform,
         seed=seed,
         num_workers=32,
-        series_length=10
+        series_length=2
     )
 
     metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_capgmyo.num_classes),
@@ -47,41 +47,41 @@ def main():
                                  lr_lambda=lr_lambda, time_window=[31, 141], time_step=[1, 1], window_fix=[9, 9],
                                  metrics=metrics)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
-                         name="Series Chinese CapgMyo", max_epochs=28, callbacks=callbacks, seed=seed,
+                         name="2 Series Chinese CapgMyo", max_epochs=28, callbacks=callbacks, seed=seed,
                          model_checkpoint_index=0)
 
-    #callbacks = [partial(ModelCheckpoint, monitor='val/loss', dirpath=MODELS_FOLDER),
-    #             partial(EarlyStopping, monitor='val/Accuracy', patience=7, mode='max')]
+    callbacks = [partial(ModelCheckpoint, monitor='val/loss', dirpath=MODELS_FOLDER),
+                partial(EarlyStopping, monitor='val/Accuracy', patience=7, mode='max')]
 
-    #partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
-    #                             sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31, 141], time_step=[1, 1],
-    #                             window_fix=[9, 9], metrics=metrics)
-    #cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="Series CapgMyo",
-    #                     max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
+    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31, 141], time_step=[1, 1],
+                                window_fix=[9, 9], metrics=metrics)
+    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="2 Series CapgMyo",
+                        max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
 
-    #data_module_myoarmband = MyoArmbandDataModule(
-    #    batch_size=10000,
-    #    num_workers=32,
-    #    train_transforms=transform,
-    #    val_transforms=transform,
-    #    test_transforms=transform,
-    #    k_folds=6,
-    #    seed=seed,
-    #    series_length=10
-    #)
+    data_module_myoarmband = MyoArmbandDataModule(
+       batch_size=10000,
+       num_workers=32,
+       train_transforms=transform,
+       val_transforms=transform,
+       test_transforms=transform,
+       k_folds=6,
+       seed=seed,
+       series_length=2
+    )
 
-    #metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_myoarmband.num_classes),
-    #                            Specificity(average='macro', num_classes=data_module_myoarmband.num_classes),
-    #                            Precision(average='macro', num_classes=data_module_myoarmband.num_classes),
-    #                            F1Score(average='macro', num_classes=data_module_myoarmband.num_classes)]).to(
-    #    torch.device("cuda", 0))
+    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_myoarmband.num_classes),
+                               Specificity(average='macro', num_classes=data_module_myoarmband.num_classes),
+                               Precision(average='macro', num_classes=data_module_myoarmband.num_classes),
+                               F1Score(average='macro', num_classes=data_module_myoarmband.num_classes)]).to(
+       torch.device("cuda", 0))
 
-    #partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
-    #                             sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31], time_step=[1],
-    #                             window_fix=[9], metrics=metrics)
-    #cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier,
-    #                     name="Series MyoArmband", max_epochs=150, callbacks=callbacks, seed=seed,
-    #                     model_checkpoint_index=0)
+    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31], time_step=[1],
+                                window_fix=[9], metrics=metrics)
+    cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier,
+                        name="2 Series MyoArmband", max_epochs=150, callbacks=callbacks, seed=seed,
+                        model_checkpoint_index=0)
 
     # data_module_ninapro = NinaProDataModule(
     #     batch_size=1000,

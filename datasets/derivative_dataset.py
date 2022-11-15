@@ -11,7 +11,7 @@ class SpaceTimeDataset(AbstractDataset):
                  data_frame: pd.DataFrame,
                  locations: List,
                  window_length: int,
-                 # window_step: int,
+                 window_step: int,
                  transform: Compose = ToTensor(),
                  source_path_name: str = 'path',
                  target_name: str = 'label',
@@ -19,13 +19,13 @@ class SpaceTimeDataset(AbstractDataset):
         super().__init__(data_frame, transform, source_path_name, target_name, series_name)
 
         self.locations = locations
-        # self.locations = pd.Index([])
-        # series_ids = list(data_frame[series_name].unique())
-        # for idx, s in enumerate(series_ids):
-        #     d = data_frame[data_frame[series_name] == s]
-        #     d = d.drop(d.tail(window_length).index, inplace=False).iloc[::window_step, :].index
-        #     self.locations = self.locations.union(d)
-        # self.locations = self.locations.tolist()
+        self.locations = pd.Index([])
+        series_ids = list(data_frame[series_name].unique())
+        for idx, s in enumerate(series_ids):
+            d = data_frame[data_frame[series_name] == s]
+            d = d.drop(d.tail(window_length).index, inplace=False).iloc[::window_step, :].index
+            self.locations = self.locations.union(d)
+        self.locations = self.locations.tolist()
         self.window_length = window_length
         self.samples_amount = len(self.locations)
 

@@ -18,14 +18,13 @@ class Classifier(pl.LightningModule):
                  optimizer: type(torch.optim.Optimizer) = torch.optim.AdamW,
                  lr_scheduler: type(torch.optim.lr_scheduler) = torch.optim.lr_scheduler.ReduceLROnPlateau,
                  criterion: nn.Module = nn.CrossEntropyLoss(),
-                 time_window: List[int] = [40],
-                 time_step: List[int] = [1],
+                 time_window: List[int] = [],
+                 time_step: List[int] = [],
                  window_fix: List[int] = None,
                  metrics: MetricCollection = MetricCollection([]),
                  **kwargs):
         super().__init__()
-        self.save_hyperparameters()
-        # ignore=['model',
+        self.save_hyperparameters(ignore=['lr_lambda'])
         #                                   'criterion',
         #                                   'lr_lambda',
         #                                   'lr_scheduler',
