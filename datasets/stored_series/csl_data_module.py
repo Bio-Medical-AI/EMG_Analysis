@@ -50,8 +50,10 @@ class CslDataModule(SeriesDataModule):
             shuffle_train,
             seed,
             k_folds,
-            partial(dataset, window_length=series_length, window_step=window_step),
-            split_method)
+            dataset,
+            split_method,
+            series_length,
+            window_step)
 
     def prepare_data(self) -> None:
         self.data: pd.DataFrame = pd.read_pickle(self.df_path)
