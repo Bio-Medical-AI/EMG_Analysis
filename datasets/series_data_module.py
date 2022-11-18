@@ -1,21 +1,15 @@
-import math
 import os
 from functools import partial
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
-import pytorch_lightning as pl
-from pandas import Index
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
-from random import randint
-import random
-from torch.utils.data import Dataset
 
-from datasets.abstract_dataset import AbstractDataset
+from datasets import AbstractDataModule, SpaceTimeDataset
 
 
-class SeriesDataModule(pl.LightningDataModule):
+class SeriesDataModule(AbstractDataModule):
     def __init__(self,
                  df_path: os.PathLike or str,
                  width: int,
@@ -64,53 +58,37 @@ class SeriesDataModule(pl.LightningDataModule):
             dataset,
             split_method
         )
-        self.window_length: int = window_length,
+        self.window_length: int = window_length
         self.window_step: int = window_step
         self.locations: Dict[str, List] = {}
 
-    def split_data(self) -> None:
+    def setup(self, stage: Optional[str] = None) -> None:
+        self.split_data()
+        self.calculate_locations()
+
+    def calculate_locations(self) -> None:
         if self.k_folds < 2:
-            if not self.splits:
-                train_series = self.get_random_series(self.data, proportion=self.train_vs_rest_size)
-                non_train_data = self.data.loc[~self.data[self.series_name].isin(train_series)]
-                val_series = self.get_random_series(non_train_data, proportion=self.val_vs_test_size)
-                test_series = list(set(self.subjects) - set(train_series) - set(val_series))
-                self.splits['train'] = self.data.index[self.data[self.subject_name].isin(train_series)]
-                self.splits['val'] = self.data.index[self.data[self.subject_name].isin(val_series)]
-                self.splits['test'] = self.data.index[self.data[self.subject_name].isin(test_series)]
+            if not self.locations:
                 self.locations = {}
                 for key in self.splits.keys():
-                    self.locations[key] = self.get_locations(self.data.iloc[self.splits['test']].reset_index())
+                    self.locations[key] = self.get_locations(self.data.iloc[self.splits[key]])
         else:
-            if not self.splits:
-                tmp_data = self.data
-                for f in range(self.k_folds):
-                    series = self.get_random_series(tmp_data, proportion=1. / (self.k_folds - f))
-                    self.folds.append(self.data.index[self.data[self.series_name].isin(series)])
-                    tmp_data = tmp_data.loc[~tmp_data[self.series_name].isin(series)]
-
+            if not self.locations:
                 for idx, fold in enumerate(self.folds):
-                    self.locations[str(idx)] = self.get_locations(self.data.iloc[self.splits['test']].reset_index())
+                    self.locations[str(idx)] = self.get_locations(self.data.iloc[fold])
 
-            self.splits['train'] = pd.Index([])
-            for indexes in [
-                fold for idx, fold in enumerate(self.folds) if idx not in [self.fold, (self.fold + 1) % self.k_folds]]:
-                self.splits['train'] = self.splits['train'].union(indexes)
-            self.splits['val'] = self.folds[self.fold]
-            self.splits['test'] = self.folds[(self.fold + 1) % self.k_folds]
-
-            self.splits['train'] = []
+            self.locations['train'] = []
             for indexes in \
                     [str(idx) for idx in range(self.k_folds) if idx not in [self.fold, (self.fold + 1) % self.k_folds]]:
-                self.locations['train'].append(self.locations[indexes])
+                self.locations['train'] += self.locations[indexes]
             self.locations['val'] = self.locations[str(self.fold)]
             self.locations['test'] = self.locations[str((self.fold + 1) % self.k_folds)]
 
     def get_locations(self, data_frame: pd.DataFrame) -> list:
         locations = pd.Index([])
-        series_ids = list(data_frame[series_name].unique())
+        series_ids = list(data_frame[self.series_name].unique())
         for s in series_ids:
-            d = data_frame[data_frame[series_name] == s]
+            d = data_frame[data_frame[self.series_name] == s]
             d = d.iloc[:-self.window_length].iloc[::self.window_step, :].index
             locations = locations.union(d)
         return locations.tolist()
@@ -121,7 +99,7 @@ class SeriesDataModule(pl.LightningDataModule):
         :return:
         """
         return DataLoader(
-            self.dataset(data_frame=self.data.iloc[self.splits['train']],
+            self.dataset(data_frame=self.data,
                          locations=self.locations['train'],
                          transform=self.train_transforms,
                          source_path_name=self.source_name,
@@ -139,7 +117,7 @@ class SeriesDataModule(pl.LightningDataModule):
         :return:
         """
         return DataLoader(
-            self.dataset(data_frame=self.data.iloc[self.splits['val']],
+            self.dataset(data_frame=self.data,
                          locations=self.locations['val'],
                          transform=self.val_transforms,
                          source_path_name=self.source_name,
@@ -156,7 +134,7 @@ class SeriesDataModule(pl.LightningDataModule):
         :return:
         """
         return DataLoader(
-            self.dataset(data_frame=self.data.iloc[self.splits['test']],
+            self.dataset(data_frame=self.data,
                          locations=self.locations['test'],
                          transform=self.test_transforms,
                          source_path_name=self.source_name,

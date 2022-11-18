@@ -1,8 +1,7 @@
-import torch
+from typing import List
 import numpy as np
 import pandas as pd
 from torchvision.transforms import Compose, ToTensor
-from torch.utils.data import Dataset
 from datasets.abstract_dataset import AbstractDataset
 
 

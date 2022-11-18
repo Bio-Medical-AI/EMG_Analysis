@@ -2,10 +2,8 @@ import os
 
 import pandas as pd
 from torchvision.transforms import Compose, ToTensor
-from functools import partial
 from datasets import prepare_ninapro, prepare_dataframe_dataset, SeriesDataModule, SpaceTimeDataset
 from definitions import SERIES_FOLDER
-import typing
 
 
 class NinaProDataModule(SeriesDataModule):

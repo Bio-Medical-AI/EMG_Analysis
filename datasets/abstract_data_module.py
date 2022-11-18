@@ -10,7 +10,6 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 from random import randint
 import random
-from torch.utils.data import Dataset
 
 from datasets.abstract_dataset import AbstractDataset
 
@@ -103,17 +102,15 @@ class AbstractDataModule(pl.LightningDataModule):
                 tmp_data = self.data
                 for f in range(self.k_folds):
                     series = self.get_random_series(tmp_data, proportion=1. / (self.k_folds - f))
-                    self.folds.append(series)
+                    self.folds.append(self.data.index[self.data[self.series_name].isin(series)])
                     tmp_data = tmp_data.loc[~tmp_data[self.series_name].isin(series)]
 
-            self.splits['train'] = self.data.index[self.data[self.series_name].isin(
-                [item
-                 for i, sublist in enumerate(self.folds) if i not in [self.fold, (self.fold + 1) % self.k_folds]
-                 for item in sublist])]
-            self.splits['val'] = self.data.index[self.data[self.series_name].isin(
-                self.folds[self.fold])]
-            self.splits['test'] = self.data.index[self.data[self.series_name].isin(
-                self.folds[(self.fold + 1) % self.k_folds])]
+            self.splits['train'] = pd.Index([])
+            for indexes in [
+                fold for idx, fold in enumerate(self.folds) if idx not in [self.fold, (self.fold + 1) % self.k_folds]]:
+                self.splits['train'] = self.splits['train'].union(indexes)
+            self.splits['val'] = self.folds[self.fold]
+            self.splits['test'] = self.folds[(self.fold + 1) % self.k_folds]
 
     def get_random_series(self, data: pd.DataFrame, proportion: float) -> list or None:
         if self.split_method == 'default':

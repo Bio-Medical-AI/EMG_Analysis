@@ -2,7 +2,6 @@ import os
 
 import pandas as pd
 from torchvision.transforms import Compose, ToTensor
-from functools import partial
 from datasets import prepare_capgmyo, prepare_dataframe_dataset, SeriesDataModule, SpaceTimeDataset
 from definitions import SERIES_FOLDER
 
