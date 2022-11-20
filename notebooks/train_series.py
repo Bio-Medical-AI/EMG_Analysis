@@ -47,7 +47,7 @@ def main():
                                  lr_lambda=lr_lambda, time_window=[31, 141], time_step=[1, 1], window_fix=[9, 9],
                                  metrics=metrics)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
-                         name="2 Series Chinese CapgMyo", max_epochs=2, callbacks=callbacks, seed=seed,
+                         name="2 Series Chinese CapgMyo", max_epochs=28, callbacks=callbacks, seed=seed,
                          model_checkpoint_index=0)
 
     callbacks = [partial(ModelCheckpoint, monitor='val/loss', dirpath=MODELS_FOLDER),

@@ -1,41 +1,37 @@
 from typing import List
-import numpy as np
 import pandas as pd
+import torch
 from torchvision.transforms import Compose, ToTensor
-from datasets.abstract_dataset import AbstractDataset
+from datasets.space_time_dataset import SpaceTimeDataset
 
 
-class SpaceTimeDataset(AbstractDataset):
+class DerivativeDataset(SpaceTimeDataset):
     def __init__(self,
                  data_frame: pd.DataFrame,
                  locations: List,
                  window_length: int,
-                 window_step: int,
                  transform: Compose = ToTensor(),
                  source_path_name: str = 'path',
                  target_name: str = 'label',
                  series_name: str = 'series'):
-        super().__init__(data_frame, transform, source_path_name, target_name, series_name)
-
-        self.locations = locations
-        self.locations = pd.Index([])
-        series_ids = list(data_frame[series_name].unique())
-        for idx, s in enumerate(series_ids):
-            d = data_frame[data_frame[series_name] == s]
-            d = d.drop(d.tail(window_length).index, inplace=False).iloc[::window_step, :].index
-            self.locations = self.locations.union(d)
-        self.locations = self.locations.tolist()
-        self.window_length = window_length
-        self.samples_amount = len(self.locations)
+        super().__init__(data_frame,
+                         locations,
+                         window_length,
+                         transform,
+                         source_path_name,
+                         target_name,
+                         series_name)
 
     def __getitem__(self, index: int) -> dict:
-        label = int(self.labels.iloc[self.locations[index]])
-        series = self.series.iloc[self.locations[index]]
-        data = np.squeeze(
-            np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist()))
-        if self.transform is not None:
-            data = self.transform(data).float()
-        return {'data': data, 'label': label, 'series': series, 'index': index}
+        output = super().__getitem__(index)
+        output['data'] = add_derivative(output['data'])
+        return output
 
-    def __len__(self) -> int:
-        return self.samples_amount
+
+def add_derivative(input: torch.Tensor) -> torch.Tensor:
+    input = torch.reshape(input, (input.shape[0], -1))
+    output = torch.cat([torch.zeros(1, input.shape[1]), input])[:-1]
+    output = input - output
+    output[0] = 0.
+    output = torch.stack([input, output])
+    return output
