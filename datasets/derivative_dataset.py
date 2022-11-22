@@ -29,6 +29,7 @@ class DerivativeDataset(SpaceTimeDataset):
 
 
 def add_derivative(input: torch.Tensor) -> torch.Tensor:
+    input = torch.squeeze(input)
     input = torch.reshape(input, (input.shape[0], -1))
     output = torch.cat([torch.zeros(1, input.shape[1]), input])[:-1]
     output = input - output
