@@ -6,10 +6,10 @@ import pandas as pd
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 
-from datasets import AbstractDataModule, SpaceTimeDataset
+from datasets import AbstractDataModule, SpectrogramDataset
 
 
-class SeriesDataModule(AbstractDataModule):
+class SpectrogramDataModule(AbstractDataModule):
     def __init__(self,
                  df_path: os.PathLike or str,
                  width: int,
@@ -23,19 +23,19 @@ class SeriesDataModule(AbstractDataModule):
                  val_vs_test_size: float = 0.5,
                  source_name: str = 'path',
                  target_name: str = 'label',
-                 series_name: str = 'series',
+                 series_name: str = 'spectrograms',
                  subject_name: str = 'subject',
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type or partial = SpaceTimeDataset,
+                 dataset: type or partial = SpectrogramDataset,
                  split_method: str = 'default',
                  window_length: int = 1,
                  window_step: int = 1
                  ):
-        super(SeriesDataModule, self).__init__(
+        super(SpectrogramDataModule, self).__init__(
             df_path,
             width,
             height,
@@ -102,7 +102,7 @@ class SeriesDataModule(AbstractDataModule):
             self.dataset(data_frame=self.data,
                          locations=self.locations['train'],
                          transform=self.train_transforms,
-                         source_path_name=self.source_name,
+                         source_name=self.source_name,
                          target_name=self.target_name,
                          series_name=self.series_name,
                          window_length=self.window_length),
@@ -120,7 +120,7 @@ class SeriesDataModule(AbstractDataModule):
             self.dataset(data_frame=self.data,
                          locations=self.locations['val'],
                          transform=self.val_transforms,
-                         source_path_name=self.source_name,
+                         source_name=self.source_name,
                          target_name=self.target_name,
                          series_name=self.series_name,
                          window_length=self.window_length),
@@ -137,22 +137,10 @@ class SeriesDataModule(AbstractDataModule):
             self.dataset(data_frame=self.data,
                          locations=self.locations['test'],
                          transform=self.test_transforms,
-                         source_path_name=self.source_name,
+                         source_name=self.source_name,
                          target_name=self.target_name,
                          series_name=self.series_name,
                          window_length=self.window_length),
             batch_size=self.batch_size,
             num_workers=self.num_workers
         )
-
-    def get_data_parameters(self):
-        return {'num_classes': self.num_classes, 'input_width': self.width, 'input_height': self.height,
-                'channels': self.channels}
-
-    def set_fold(self, fold: int):
-        if self.k_folds > 2:
-            self.fold = fold % self.k_folds
-
-    def next_fold(self):
-        if self.k_folds > 2:
-            self.set_fold(self.fold + 1)

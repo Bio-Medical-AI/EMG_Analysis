@@ -110,7 +110,7 @@ class Classifier(pl.LightningModule):
     def _step(self, batch: Dict[str, Tensor or Any]) -> Dict[str, Tensor or Any]:
         x = batch['data']
         y = batch['label']
-        series = batch['series']
+        series = batch['spectrograms']
         index = batch['index']
         logits = self.forward(x)
         loss = self.criterion(logits, y)
@@ -118,7 +118,7 @@ class Classifier(pl.LightningModule):
         return {'loss': loss,
                 'preds': preds,
                 'labels': y,
-                'series': series,
+                'spectrograms': series,
                 'index': index}
 
     def _moving_average(self, df: pd.DataFrame, window: int, step: int) -> STEP_OUTPUT:
@@ -139,8 +139,8 @@ class Classifier(pl.LightningModule):
         preds_list = []
         labels_list = []
 
-        for series in df['series'].unique().tolist():
-            results = self._moving_average(df.loc[df['series'] == series], window, step)
+        for series in df['spectrograms'].unique().tolist():
+            results = self._moving_average(df.loc[df['spectrograms'] == series], window, step)
             if 'preds_list' in results.keys():
                 preds_list += results['preds_list']
                 labels_list += results['labels_list']
@@ -163,7 +163,7 @@ class Classifier(pl.LightningModule):
     def _epoch_end(self, step_outputs: EPOCH_OUTPUT) -> STEP_OUTPUT:
         preds = self._connect_epoch_results(step_outputs, 'preds')
         labels = self._connect_epoch_results(step_outputs, 'labels')
-        series = self._connect_epoch_results(step_outputs, 'series')
+        series = self._connect_epoch_results(step_outputs, 'spectrograms')
         index = self._connect_epoch_results(step_outputs, 'index')
         loss = [step['loss'] for step in step_outputs]
         # acc = accuracy(preds, labels, average='micro')
@@ -172,7 +172,7 @@ class Classifier(pl.LightningModule):
         # spec = specificity(preds, labels, average='macro', num_classes=self.model.num_classes)
         output = {'preds': preds,
                   'labels': labels,
-                  'series': series,
+                  'spectrograms': series,
                   'index': index,
                   'loss': loss}
         measurements = self._calculate_metrics(preds.to(self.device), labels.to(self.device))

@@ -1,12 +1,11 @@
 import os
 
-import pandas as pd
 from torchvision.transforms import Compose, ToTensor
-from datasets import prepare_ninapro, prepare_dataframe_dataset, SeriesDataModule, SpaceTimeDataset
+from datasets import prepare_myoarmband, prepare_dataframe_dataset, SpectrogramDataModule, SpectrogramDataset
 from definitions import SERIES_FOLDER
 
 
-class NinaProDataModule(SeriesDataModule):
+class MyoArmbandDataModule(SpectrogramDataModule):
     def __init__(self,
                  train_transforms: Compose = ToTensor(),
                  val_transforms: Compose = ToTensor(),
@@ -15,26 +14,26 @@ class NinaProDataModule(SeriesDataModule):
                  val_vs_test_size: float = 0.5,
                  source_name: str = 'record',
                  target_name: str = 'label',
-                 series_name: str = 'series',
+                 series_name: str = 'spectrograms',
                  subject_name: str = 'subject',
                  batch_size: int = 12,
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type = SpaceTimeDataset,
-                 split_method: str = 'default',
+                 dataset: type = SpectrogramDataset,
+                 split_method: str = 'subject',
                  series_length: int = 10,
                  window_step: int = 1):
-        df_path = os.path.join(SERIES_FOLDER, 'NinaPro', 'NinaPro.pkl')
+        df_path = os.path.join(SERIES_FOLDER, 'MyoArmband', 'MyoArmband.pkl')
         if not os.path.isfile(df_path):
-            prepare_ninapro(prepare_dataframe_dataset, SERIES_FOLDER)
-        super(NinaProDataModule, self).__init__(
+            prepare_myoarmband(prepare_dataframe_dataset, SERIES_FOLDER)
+        super(MyoArmbandDataModule, self).__init__(
             df_path,
             series_length,
-            10,
+            8,
             1,
-            52,
+            7,
             train_transforms,
             val_transforms,
             test_transforms,
@@ -52,7 +51,5 @@ class NinaProDataModule(SeriesDataModule):
             dataset,
             split_method,
             series_length,
-            window_step)
-
-    def prepare_data(self) -> None:
-        self.data: pd.DataFrame = pd.read_pickle(self.df_path)
+            window_step
+        )

@@ -121,7 +121,7 @@ def get_capgmyo_dataset() -> pd.DataFrame:
                 series.extend(
                     [(recording - 1) + (gesture - 1) * 10 + (test_object - 1) * 80 for _ in range(size)])
                 subjects.extend([test_object for _ in range(size)])
-    return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels, 'series': series, 'subject': subjects})
+    return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels, 'spectrograms': series, 'subject': subjects})
 
 
 def get_csl_dataset() -> pd.DataFrame:
@@ -151,7 +151,7 @@ def get_csl_dataset() -> pd.DataFrame:
                         labels.extend([gest for _ in range(trial.shape[2])])
                         series.extend([gest + (session - 1) * 27 + (subject - 1) * 135 for _ in range(trial.shape[2])])
                         subjects.extend([subject for _ in range(trial.shape[2])])
-    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series, 'subject': subjects})
+    return pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
 
 
 def get_ninapro_dataset() -> pd.DataFrame:
@@ -185,10 +185,10 @@ def get_ninapro_dataset() -> pd.DataFrame:
                 previous = gest
                 series.append(counter)
             last_series = counter
-            # series.extend([(session - 1) + (subject - 1) * 3 for _ in range(gesture.shape[0])])
+            # spectrograms.extend([(session - 1) + (subject - 1) * 3 for _ in range(gesture.shape[0])])
             subjects.extend([subject for _ in range(gesture.shape[0])])
 
-    return pd.DataFrame({'record': recordings, 'label': labels, 'series': series, 'subject': subjects})
+    return pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
 
 
 def get_myoarmband_dataset() -> pd.DataFrame:
@@ -203,14 +203,14 @@ def get_myoarmband_dataset() -> pd.DataFrame:
         return pd.DataFrame({'record': records})
 
     def classe_to_df(path: str, subfolder: str, start_val: int = 0):
-        df = pd.DataFrame(columns=['record', 'label', 'series', 'subject'])
+        df = pd.DataFrame(columns=['record', 'label', 'spectrograms', 'subject'])
         for i in range(28):
             os.path.join(path, f'classe_{i}.dat')
             arr = np.fromfile(os.path.join(path, subfolder, f'classe_{i}.dat'), dtype=np.int16)
             arr = np.array(arr, dtype=np.float32)
             formatted = format_data_to_train(arr)
             formatted['label'] = i % 7
-            formatted['series'] = start_val + i
+            formatted['spectrograms'] = start_val + i
             df = pd.concat([df, formatted], ignore_index=True)
         return df
 
@@ -254,7 +254,7 @@ def save_arrays(dataframe: pd.DataFrame, name: str, path: os.path) -> pd.DataFra
         np.save(path, row['record'])
         paths.append(path)
 
-    df: pd.DataFrame = pd.DataFrame({'path': paths, 'label': dataframe['label'], 'series': dataframe['series'],
+    df: pd.DataFrame = pd.DataFrame({'path': paths, 'label': dataframe['label'], 'spectrograms': dataframe['spectrograms'],
                                      'subject': dataframe['subject']})
     df.to_csv(os.path.join(base_path, f'{name}.csv'), index=False)
     return df

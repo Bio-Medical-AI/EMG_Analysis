@@ -2,23 +2,23 @@ from typing import List
 import pandas as pd
 import torch
 from torchvision.transforms import Compose, ToTensor
-from datasets.space_time_dataset import SpaceTimeDataset
+from datasets.spectrogram_dataset import SpectrogramDataset
 
 
-class DerivativeDataset(SpaceTimeDataset):
+class DerivativeDataset(SpectrogramDataset):
     def __init__(self,
                  data_frame: pd.DataFrame,
                  locations: List,
                  window_length: int,
                  transform: Compose = ToTensor(),
-                 source_path_name: str = 'path',
+                 source_name: str = 'path',
                  target_name: str = 'label',
-                 series_name: str = 'series'):
+                 series_name: str = 'spectrograms'):
         super().__init__(data_frame,
                          locations,
                          window_length,
                          transform,
-                         source_path_name,
+                         source_name,
                          target_name,
                          series_name)
 

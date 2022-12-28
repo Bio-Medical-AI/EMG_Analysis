@@ -28,7 +28,7 @@ class AbstractDataModule(pl.LightningDataModule):
                  val_vs_test_size: float = 0.5,
                  source_name: str = 'path',
                  target_name: str = 'label',
-                 series_name: str = 'series',
+                 series_name: str = 'spectrograms',
                  subject_name: str = 'subject',
                  batch_size: int = 12,
                  num_workers: int = 8,
@@ -42,7 +42,9 @@ class AbstractDataModule(pl.LightningDataModule):
         # path
         self.df_path: os.PathLike = df_path
         self.data: pd.DataFrame = pd.DataFrame()
-        self.prepare_data()
+        self.subjects = []
+        self.series = []
+        self.targets = []
         # data_parameters
         self.width = width
         self.height = height
@@ -75,14 +77,16 @@ class AbstractDataModule(pl.LightningDataModule):
         self.seed: int = randint(0, 2**32 - 1) if seed is None else seed
         # datasets
         self.dataset: type = dataset
+        self.prepare_data()
         random.seed(self.seed)
-        self.subjects = list(self.data[self.subject_name].unique())
-        self.series = list(self.data[self.series_name].unique())
-        self.targets = list(self.data[self.target_name].unique())
+
         self.split_method = split_method
 
     def prepare_data(self) -> None:
         self.data = pd.read_pickle(self.df_path)
+        self.subjects = list(self.data[self.subject_name].unique())
+        self.series = list(self.data[self.series_name].unique())
+        self.targets = list(self.data[self.target_name].unique())
 
     def setup(self, stage: Optional[str] = None) -> None:
         self.split_data()
@@ -135,7 +139,7 @@ class AbstractDataModule(pl.LightningDataModule):
         return DataLoader(
             self.dataset(data_frame=self.data.iloc[self.splits['train']].reset_index(),
                          transform=self.train_transforms,
-                         source_path_name=self.source_name,
+                         source_name=self.source_name,
                          target_name=self.target_name,
                          series_name=self.series_name),
             shuffle=self.shuffle_train,
@@ -151,7 +155,7 @@ class AbstractDataModule(pl.LightningDataModule):
         return DataLoader(
             self.dataset(data_frame=self.data.iloc[self.splits['val']].reset_index(),
                          transform=self.val_transforms,
-                         source_path_name=self.source_name,
+                         source_name=self.source_name,
                          target_name=self.target_name,
                          series_name=self.series_name),
             batch_size=self.batch_size,
@@ -166,7 +170,7 @@ class AbstractDataModule(pl.LightningDataModule):
         return DataLoader(
             self.dataset(data_frame=self.data.iloc[self.splits['test']].reset_index(),
                          transform=self.test_transforms,
-                         source_path_name=self.source_name,
+                         source_name=self.source_name,
                          target_name=self.target_name,
                          series_name=self.series_name),
             batch_size=self.batch_size,

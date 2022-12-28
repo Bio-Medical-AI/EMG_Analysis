@@ -1,0 +1,4 @@
+from datasets.spectrograms.capgmyo_data_module import CapgMyoDataModule
+from datasets.spectrograms.csl_data_module import CslDataModule
+from datasets.spectrograms.ninapro_data_module import NinaProDataModule
+from datasets.spectrograms.myoarmband_data_module import MyoArmbandDataModule

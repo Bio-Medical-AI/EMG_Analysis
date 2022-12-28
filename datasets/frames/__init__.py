@@ -1,0 +1,4 @@
+from datasets.frames.capgmyo_data_module import CapgMyoDataModule
+from datasets.frames.csl_data_module import CslDataModule
+from datasets.frames.ninapro_data_module import NinaProDataModule
+from datasets.frames.myoarmband_data_module import MyoArmbandDataModule

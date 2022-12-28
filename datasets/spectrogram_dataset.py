@@ -5,16 +5,16 @@ from torchvision.transforms import Compose, ToTensor
 from datasets.abstract_dataset import AbstractDataset
 
 
-class SpaceTimeDataset(AbstractDataset):
+class SpectrogramDataset(AbstractDataset):
     def __init__(self,
                  data_frame: pd.DataFrame,
                  locations: List,
                  window_length: int,
                  transform: Compose = ToTensor(),
-                 source_path_name: str = 'path',
+                 source_name: str = 'path',
                  target_name: str = 'label',
-                 series_name: str = 'series'):
-        super().__init__(data_frame, transform, source_path_name, target_name, series_name)
+                 series_name: str = 'spectrograms'):
+        super().__init__(data_frame, transform, source_name, target_name, series_name)
 
         self.locations = locations
         self.window_length = window_length
@@ -27,7 +27,7 @@ class SpaceTimeDataset(AbstractDataset):
             np.dstack(self.records[self.locations[index]:(self.locations[index] + self.window_length)].tolist()))
         if self.transform is not None:
             data = self.transform(data).float()
-        return {'data': data, 'label': label, 'series': series, 'index': index}
+        return {'data': data, 'label': label, 'spectrograms': series, 'index': index}
 
     def __len__(self) -> int:
         return self.samples_amount

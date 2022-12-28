@@ -1,6 +1,7 @@
 from typing import List
 
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from torch import nn
 from torchmetrics import MetricCollection
 
 from datasets import AbstractDataModule
@@ -19,14 +20,15 @@ import copy
 
 def cross_val_experiment(data_module: AbstractDataModule, partial_classifier: partial, name: str, max_epochs: int,
                          callbacks: list = None, model_checkpoint_index: int = None, project: str = "EMG Armband",
-                         save_dir: str = 'wandb_logs', seed: int = 0, classifier_params: dict = {}):
+                         save_dir: str = 'wandb_logs', seed: int = 0, classifier_params: dict = {},
+                         model_type: type(nn.Module) = OriginalModel):
     pl.seed_everything(seed, workers=True)
     if not classifier_params:
         classifier_params = data_module.get_data_parameters()
     k_folds = data_module.k_folds
     for k in tqdm(range(k_folds)):
         classifier = partial_classifier(
-            OriginalModel(**classifier_params))
+            model_type(**classifier_params))
         logger = WandbLogger(project=project, name=name, save_dir=save_dir)
         if callbacks:
             callbacks_initialized = [callback() for callback in callbacks]
@@ -60,12 +62,13 @@ def xgb_cross_val_experiments(data_module: AbstractDataModule, partial_classifie
 def xgb_cross_val_experiments_file(data_module: AbstractDataModule, model_files: List[str], name: str,
                                    max_epochs: int, project: str = "EMG Armband", save_dir: str = 'wandb_logs',
                                    seed: int = 0, time_window: int = 150, time_step: int = 10,
-                                   measurements: MetricCollection = MetricCollection([]), classifier_params: dict = {}):
+                                   measurements: MetricCollection = MetricCollection([]), classifier_params: dict = {},
+                                   model_type: type(nn.Module) = OriginalModel):
     pl.seed_everything(seed, workers=True)
     k_folds = data_module.k_folds
     if not classifier_params:
         classifier_params = data_module.get_data_parameters()
-    model = OriginalModel(**classifier_params)
+    model = model_type(**classifier_params)
     for k in tqdm(range(k_folds)):
         model.load_state_dict(torch.load(os.path.join(MODELS_FOLDER, model_files[k])))
         model.model = model.model[0:26]
