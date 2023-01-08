@@ -39,10 +39,10 @@ def main():
         torch.device("cuda", 0))
 
     callbacks = [partial(ModelCheckpoint, monitor='val/loss', dirpath=MODELS_FOLDER),
-                 partial(EarlyStopping, monitor='val/Accuracy', patience=50, mode='max')]
+                 partial(EarlyStopping, monitor='val/Accuracy', patience=30, mode='max')]
 
     partial_classifier = partial(SequenceClassifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001},
-                                 monitor='val/Accuracy', sched_kwargs={'patience': 30, 'mode': 'max'},
+                                 monitor='val/Accuracy', sched_kwargs={'patience': 20, 'mode': 'max'},
                                  time_window=[40, 150], time_step=[1, 1], metrics=metrics)
     cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="CRNN CapgMyo",
                          max_epochs=max_epochs, callbacks=callbacks, seed=seed, model_checkpoint_index=0,

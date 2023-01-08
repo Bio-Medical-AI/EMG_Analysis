@@ -63,7 +63,7 @@ class SpectrogramDataModule(AbstractDataModule):
         self.locations: Dict[str, List] = {}
 
     def setup(self, stage: Optional[str] = None) -> None:
-        self.split_data()
+        super().setup(stage)
         self.calculate_locations()
 
     def calculate_locations(self) -> None:

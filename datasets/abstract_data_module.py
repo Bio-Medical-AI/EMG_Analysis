@@ -2,12 +2,12 @@ import math
 import os
 from functools import partial
 from typing import Dict, Optional
-
+import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 from pandas import Index
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, ToTensor
+from torchvision.transforms import Compose, ToTensor, Normalize
 from random import randint
 import random
 
@@ -40,6 +40,8 @@ class AbstractDataModule(pl.LightningDataModule):
                  ):
         super(AbstractDataModule, self).__init__()
         # path
+        self.std = None
+        self.mean = None
         self.df_path: os.PathLike = df_path
         self.data: pd.DataFrame = pd.DataFrame()
         self.subjects = []
@@ -90,6 +92,7 @@ class AbstractDataModule(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         self.split_data()
+        self.calculate_mean_std()
 
     def split_data(self) -> None:
         if self.k_folds < 2:
@@ -130,6 +133,34 @@ class AbstractDataModule(pl.LightningDataModule):
             series = data.loc[data[self.subject_name].isin(subjects)][self.series_name].unique()
             return series
         return None
+
+    def calculate_mean_std(self) -> None:
+        train_values = np.stack([item for _, item in self.data.iloc[self.splits['test']][self.source_name].iteritems()])
+        self.mean = np.mean(train_values)
+        self.std = np.std(train_values)
+        norm_idx = None
+        for idx, tr in enumerate(self.train_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.train_transforms.transforms[norm_idx].mean = self.mean
+            self.train_transforms.transforms[norm_idx].std = self.std
+
+        norm_idx = None
+        for idx, tr in enumerate(self.val_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.val_transforms.transforms[norm_idx].mean = self.mean
+            self.val_transforms.transforms[norm_idx].std = self.std
+
+        norm_idx = None
+        for idx, tr in enumerate(self.test_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.test_transforms.transforms[norm_idx].mean = self.mean
+            self.test_transforms.transforms[norm_idx].std = self.std
 
     def train_dataloader(self) -> DataLoader:
         """

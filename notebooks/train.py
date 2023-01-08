@@ -1,6 +1,6 @@
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torchmetrics import MetricCollection, Accuracy, Specificity, Precision, F1Score
-from datasets.stored_dataframe import CapgMyoDataModule, MyoArmbandDataModule, NinaProDataModule
+from datasets.frames import CapgMyoDataModule, MyoArmbandDataModule, NinaProDataModule
 from definitions import MODELS_FOLDER
 from models import Classifier
 import torch
@@ -25,8 +25,9 @@ def main():
     optimizer = torch.optim.AdamW
 
     data_module_capgmyo = CapgMyoDataModule(
-        batch_size=1000,
+        batch_size=10000,
         k_folds=10,
+        num_workers=32,
         train_transforms=transform,
         val_transforms=transform,
         test_transforms=transform,
@@ -51,7 +52,7 @@ def main():
     partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
                                  sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[40, 150], time_step=[1, 1],
                                  metrics=metrics)
-    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="CapgMyo",
+    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier, name="CapgMyo pure",
                          max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0)
 
     # model_files = [f'capgmyo_{k}_fold.pt' for k in range(10)]
