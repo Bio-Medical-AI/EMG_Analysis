@@ -30,7 +30,8 @@ class SequenceDataModule(AbstractDataModule):
                  seed: int = None,
                  k_folds: int = 0,
                  dataset: type or partial = AbstractDataset,
-                 split_method: str = 'default'
+                 split_method: str = 'default',
+                 train_dataset: type or partial = None
                  ):
 
         self.window_length: int = batch_size
@@ -57,7 +58,8 @@ class SequenceDataModule(AbstractDataModule):
             seed,
             k_folds,
             dataset,
-            split_method
+            split_method,
+            train_dataset
         )
 
     def prepare_data(self) -> None:

@@ -22,7 +22,8 @@ class CapgMyoDataModule(SequenceDataModule):
                  seed: int = None,
                  k_folds: int = 0,
                  dataset: type = AbstractDataset,
-                 split_method: str = 'default'):
+                 split_method: str = 'default',
+                 train_dataset: type = None):
         df_path = os.path.join(PKL_FOLDER, 'CapgMyo', 'CapgMyo.pkl')
         if not os.path.isfile(df_path):
             prepare_capgmyo(prepare_dataframe_dataset, PKL_FOLDER)
@@ -47,4 +48,5 @@ class CapgMyoDataModule(SequenceDataModule):
             seed,
             k_folds,
             dataset,
-            split_method)
+            split_method,
+            train_dataset)

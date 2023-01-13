@@ -32,6 +32,7 @@ class SpectrogramDataModule(AbstractDataModule):
                  k_folds: int = 0,
                  dataset: type or partial = SpectrogramDataset,
                  split_method: str = 'default',
+                 train_dataset: type or partial = None,
                  window_length: int = 1,
                  window_step: int = 1
                  ):
@@ -56,7 +57,8 @@ class SpectrogramDataModule(AbstractDataModule):
             seed,
             k_folds,
             dataset,
-            split_method
+            split_method,
+            train_dataset
         )
         self.window_length: int = window_length
         self.window_step: int = window_step
@@ -99,13 +101,13 @@ class SpectrogramDataModule(AbstractDataModule):
         :return:
         """
         return DataLoader(
-            self.dataset(data_frame=self.data,
-                         locations=self.locations['train'],
-                         transform=self.train_transforms,
-                         source_name=self.source_name,
-                         target_name=self.target_name,
-                         series_name=self.series_name,
-                         window_length=self.window_length),
+            self.train_dataset(data_frame=self.data,
+                               locations=self.locations['train'],
+                               transform=self.train_transforms,
+                               source_name=self.source_name,
+                               target_name=self.target_name,
+                               series_name=self.series_name,
+                               window_length=self.window_length),
             shuffle=self.shuffle_train,
             batch_size=self.batch_size,
             num_workers=self.num_workers

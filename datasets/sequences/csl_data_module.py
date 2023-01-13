@@ -22,7 +22,8 @@ class CslDataModule(SequenceDataModule):
                  seed: int = None,
                  k_folds: int = 0,
                  dataset: type = AbstractDataset,
-                 split_method: str = 'default'):
+                 split_method: str = 'default',
+                 train_dataset: type = None):
         df_path = os.path.join(PKL_FOLDER, 'csl-hdemg', 'csl-hdemg.pkl')
         if not os.path.isfile(df_path):
             prepare_csl(prepare_dataframe_dataset, PKL_FOLDER)
@@ -47,4 +48,5 @@ class CslDataModule(SequenceDataModule):
             seed,
             k_folds,
             dataset,
-            split_method)
+            split_method,
+            train_dataset)

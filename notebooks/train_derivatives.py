@@ -26,108 +26,108 @@ def main():
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR
     optimizer = torch.optim.AdamW
 
-    series_length = 2
+    series_length = 10
 
-    # data_module_capgmyo = CapgMyoDataModule(
+    data_module_capgmyo = CapgMyoDataModule(
+        batch_size=1000,
+        k_folds=10,
+        train_transforms=transform,
+        val_transforms=transform,
+        test_transforms=transform,
+        seed=seed,
+        num_workers=32,
+        series_length=series_length,
+        dataset=DerivativeDataset
+    )
+    classifier_params = {'num_classes': data_module_capgmyo.num_classes,
+                         'input_width': series_length,
+                         'input_height': data_module_capgmyo.width * data_module_capgmyo.height,
+                         'channels': 2}
+
+    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_capgmyo.num_classes),
+                                Specificity(average='macro', num_classes=data_module_capgmyo.num_classes),
+                                Precision(average='macro', num_classes=data_module_capgmyo.num_classes),
+                                F1Score(average='macro', num_classes=data_module_capgmyo.num_classes)]).to(
+        torch.device("cuda", 0))
+
+    partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
+                                 optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                 lr_lambda=lr_lambda, time_window=[31, 141], time_step=[1, 1], window_fix=[9, 9],
+                                 metrics=metrics)
+    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
+                         name="10 Derivative Chinese CapgMyo", max_epochs=28, callbacks=callbacks, seed=seed,
+                         model_checkpoint_index=0, classifier_params=classifier_params)
+    #
+    callbacks = [partial(ModelCheckpoint, monitor='val/loss', dirpath=MODELS_FOLDER),
+                 partial(EarlyStopping, monitor='val/Accuracy', patience=7, mode='max')]
+
+    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31, 141], time_step=[1, 1],
+                                 window_fix=[9, 9], metrics=metrics)
+    cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
+                         name="10 Derivative CapgMyo", max_epochs=150, callbacks=callbacks, seed=seed,
+                         model_checkpoint_index=0, classifier_params=classifier_params)
+
+    # data_module_myoarmband = MyoArmbandDataModule(
+    #     batch_size=10000,
+    #     num_workers=32,
+    #     train_transforms=transform,
+    #     val_transforms=transform,
+    #     test_transforms=transform,
+    #     k_folds=6,
+    #     seed=seed,
+    #     series_length=2,
+    #     dataset=DerivativeDataset
+    # )
+    #
+    # classifier_params = {'num_classes': data_module_myoarmband.num_classes,
+    #                      'input_width': data_module_myoarmband.width,
+    #                      'input_height': data_module_myoarmband.height,
+    #                      'channels': 2}
+    # print(classifier_params)
+    #
+    # metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_myoarmband.num_classes),
+    #                             Specificity(average='macro', num_classes=data_module_myoarmband.num_classes),
+    #                             Precision(average='macro', num_classes=data_module_myoarmband.num_classes),
+    #                             F1Score(average='macro', num_classes=data_module_myoarmband.num_classes)]).to(
+    #     torch.device("cuda", 0))
+    #
+    # partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
+    #                              sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31], time_step=[1],
+    #                              window_fix=[9], metrics=metrics)
+    # cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier,
+    #                      name="2 Derivative MyoArmband", max_epochs=150, callbacks=callbacks, seed=seed,
+    #                      model_checkpoint_index=0, classifier_params=classifier_params)
+    #
+    # data_module_ninapro = NinaProDataModule(
     #     batch_size=1000,
     #     k_folds=10,
+    #     num_workers=32,
     #     train_transforms=transform,
     #     val_transforms=transform,
     #     test_transforms=transform,
     #     seed=seed,
-    #     num_workers=32,
-    #     series_length=series_length,
+    #     series_length=2,
     #     dataset=DerivativeDataset
     # )
-    # classifier_params = {'num_classes': data_module_capgmyo.num_classes,
-    #                      'input_width': series_length,
-    #                      'input_height': data_module_capgmyo.width * data_module_capgmyo.height,
+    #
+    # classifier_params = {'num_classes': data_module_ninapro.num_classes,
+    #                      'input_width': data_module_ninapro.width,
+    #                      'input_height': data_module_ninapro.height,
     #                      'channels': 2}
     #
-    # metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_capgmyo.num_classes),
-    #                             Specificity(average='macro', num_classes=data_module_capgmyo.num_classes),
-    #                             Precision(average='macro', num_classes=data_module_capgmyo.num_classes),
-    #                             F1Score(average='macro', num_classes=data_module_capgmyo.num_classes)]).to(
+    # metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_ninapro.num_classes),
+    #                             Specificity(average='macro', num_classes=data_module_ninapro.num_classes),
+    #                             Precision(average='macro', num_classes=data_module_ninapro.num_classes),
+    #                             F1Score(average='macro', num_classes=data_module_ninapro.num_classes)]).to(
     #     torch.device("cuda", 0))
     #
-    # partial_classifier = partial(Classifier, optimizer=optimizer, lr_scheduler=lr_scheduler,
-    #                              optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
-    #                              lr_lambda=lr_lambda, time_window=[31, 141], time_step=[1, 1], window_fix=[9, 9],
-    #                              metrics=metrics)
-    # cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
-    #                      name="2 Derivative Chinese CapgMyo", max_epochs=28, callbacks=callbacks, seed=seed,
-    #                      model_checkpoint_index=0, classifier_params=classifier_params)
-    #
-    callbacks = [partial(ModelCheckpoint, monitor='val/loss', dirpath=MODELS_FOLDER),
-                 partial(EarlyStopping, monitor='val/Accuracy', patience=7, mode='max')]
-    #
     # partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
-    #                              sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31, 141], time_step=[1, 1],
-    #                              window_fix=[9, 9], metrics=metrics)
-    # cross_val_experiment(data_module=data_module_capgmyo, partial_classifier=partial_classifier,
-    #                      name="2 Derivative CapgMyo", max_epochs=150, callbacks=callbacks, seed=seed,
-    #                      model_checkpoint_index=0, classifier_params=classifier_params)
-
-    data_module_myoarmband = MyoArmbandDataModule(
-        batch_size=10000,
-        num_workers=32,
-        train_transforms=transform,
-        val_transforms=transform,
-        test_transforms=transform,
-        k_folds=6,
-        seed=seed,
-        series_length=2,
-        dataset=DerivativeDataset
-    )
-
-    classifier_params = {'num_classes': data_module_myoarmband.num_classes,
-                         'input_width': data_module_myoarmband.width,
-                         'input_height': data_module_myoarmband.height,
-                         'channels': 2}
-    print(classifier_params)
-
-    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_myoarmband.num_classes),
-                                Specificity(average='macro', num_classes=data_module_myoarmband.num_classes),
-                                Precision(average='macro', num_classes=data_module_myoarmband.num_classes),
-                                F1Score(average='macro', num_classes=data_module_myoarmband.num_classes)]).to(
-        torch.device("cuda", 0))
-
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[31], time_step=[1],
-                                 window_fix=[9], metrics=metrics)
-    cross_val_experiment(data_module=data_module_myoarmband, partial_classifier=partial_classifier,
-                         name="2 Derivative MyoArmband", max_epochs=150, callbacks=callbacks, seed=seed,
-                         model_checkpoint_index=0, classifier_params=classifier_params)
-
-    data_module_ninapro = NinaProDataModule(
-        batch_size=1000,
-        k_folds=10,
-        num_workers=32,
-        train_transforms=transform,
-        val_transforms=transform,
-        test_transforms=transform,
-        seed=seed,
-        series_length=2,
-        dataset=DerivativeDataset
-    )
-
-    classifier_params = {'num_classes': data_module_ninapro.num_classes,
-                         'input_width': data_module_ninapro.width,
-                         'input_height': data_module_ninapro.height,
-                         'channels': 2}
-
-    metrics = MetricCollection([Accuracy(average='micro', num_classes=data_module_ninapro.num_classes),
-                                Specificity(average='macro', num_classes=data_module_ninapro.num_classes),
-                                Precision(average='macro', num_classes=data_module_ninapro.num_classes),
-                                F1Score(average='macro', num_classes=data_module_ninapro.num_classes)]).to(
-        torch.device("cuda", 0))
-
-    partial_classifier = partial(Classifier, optim_kwargs={'lr': 0.001, 'weight_decay': 0.0001}, monitor='val/Accuracy',
-                                 sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[19], time_step=[1],
-                                 window_fix=[9], metrics=metrics)
-    cross_val_experiment(data_module=data_module_ninapro, partial_classifier=partial_classifier, name="2 Derivative NinaPro",
-                         max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0,
-                         classifier_params=classifier_params)
+    #                              sched_kwargs={'patience': 4, 'mode': 'max'}, time_window=[19], time_step=[1],
+    #                              window_fix=[9], metrics=metrics)
+    # cross_val_experiment(data_module=data_module_ninapro, partial_classifier=partial_classifier, name="2 Derivative NinaPro",
+    #                      max_epochs=150, callbacks=callbacks, seed=seed, model_checkpoint_index=0,
+    #                      classifier_params=classifier_params)
 
 
 if __name__ == '__main__':

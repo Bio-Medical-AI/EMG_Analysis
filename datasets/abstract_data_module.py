@@ -36,7 +36,8 @@ class AbstractDataModule(pl.LightningDataModule):
                  seed: int = None,
                  k_folds: int = 0,
                  dataset: type or partial = AbstractDataset,
-                 split_method: str = 'default'
+                 split_method: str = 'default',
+                 train_dataset: type or partial = None
                  ):
         super(AbstractDataModule, self).__init__()
         # path
@@ -79,6 +80,7 @@ class AbstractDataModule(pl.LightningDataModule):
         self.seed: int = randint(0, 2**32 - 1) if seed is None else seed
         # datasets
         self.dataset: type = dataset
+        self.train_dataset: type or partial = dataset if train_dataset is None else train_dataset
         self.prepare_data()
         random.seed(self.seed)
 
@@ -168,11 +170,11 @@ class AbstractDataModule(pl.LightningDataModule):
         :return:
         """
         return DataLoader(
-            self.dataset(data_frame=self.data.iloc[self.splits['train']].reset_index(),
-                         transform=self.train_transforms,
-                         source_name=self.source_name,
-                         target_name=self.target_name,
-                         series_name=self.series_name),
+            self.train_dataset(data_frame=self.data.iloc[self.splits['train']].reset_index(),
+                               transform=self.train_transforms,
+                               source_name=self.source_name,
+                               target_name=self.target_name,
+                               series_name=self.series_name),
             shuffle=self.shuffle_train,
             batch_size=self.batch_size,
             num_workers=self.num_workers
