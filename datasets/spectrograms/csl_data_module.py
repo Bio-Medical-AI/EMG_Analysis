@@ -23,6 +23,7 @@ class CslDataModule(SpectrogramDataModule):
                  k_folds: int = 0,
                  dataset: type = SpectrogramDataset,
                  split_method: str = 'default',
+                 train_dataset: type = None,
                  series_length: int = 10,
                  window_step: int = 1):
         df_path = os.path.join(SERIES_FOLDER, 'csl-hdemg', 'csl-hdemg.pkl')
@@ -50,5 +51,6 @@ class CslDataModule(SpectrogramDataModule):
             k_folds,
             dataset,
             split_method,
+            train_dataset,
             series_length,
             window_step)

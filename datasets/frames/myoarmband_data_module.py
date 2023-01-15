@@ -22,7 +22,8 @@ class MyoArmbandDataModule(AbstractDataModule):
                  seed: int = None,
                  k_folds: int = 0,
                  dataset: type = AbstractDataset,
-                 split_method: str = 'subject'):
+                 split_method: str = 'subject',
+                 train_dataset: type = None):
         df_path = os.path.join(PKL_FOLDER, 'MyoArmband', 'MyoArmband.pkl')
         if not os.path.isfile(df_path):
             prepare_myoarmband(prepare_dataframe_dataset, PKL_FOLDER)
@@ -47,4 +48,5 @@ class MyoArmbandDataModule(AbstractDataModule):
             seed,
             k_folds,
             dataset,
-            split_method)
+            split_method,
+            train_dataset)

@@ -1,7 +1,7 @@
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torchmetrics import MetricCollection, Accuracy, Specificity, Precision, F1Score
 
-from datasets.stored_series import CapgMyoDataModule, MyoArmbandDataModule, NinaProDataModule
+from datasets.spectrograms import CapgMyoDataModule, MyoArmbandDataModule, NinaProDataModule
 from definitions import MODELS_FOLDER
 from models import Classifier
 import torch

@@ -1,20 +1,19 @@
-from typing import Any
-
 import torch
 from torch import Tensor
 import torch.nn as nn
 from torch.nn.functional import pad
 from functools import partial
+from typing import Tuple, Any
 
 
 class Conv2dCylindrical(nn.Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: int | tuple[int, int],
-                 stride: int | tuple[int, int] = 1,
-                 padding: tuple[int, int] = 0,
-                 dilation: int | tuple[int, int] = 1,
+                 kernel_size: int or Tuple[int, int],
+                 stride: int or Tuple[int, int] = 1,
+                 padding: Tuple[int, int] = 0,
+                 dilation: int or Tuple[int, int] = 1,
                  groups: int = 1,
                  bias: bool = True,
                  device: Any = None,
@@ -34,9 +33,7 @@ class Conv2dCylindrical(nn.Module):
         self.vertical_pad = partial(pad, pad=(padding[0], padding[0]), mode='constant', value=0)
 
     def forward(self, x: Tensor) -> Tensor:
-        h = self.horizontal_pad(x)
-        v = self.vertical_pad(h)
-        return self.conv2d(v)
+        return self.conv2d(self.vertical_pad(self.horizontal_pad(x)))
 
 
 class OriginalModel(nn.Module):

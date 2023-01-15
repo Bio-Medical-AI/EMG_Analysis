@@ -2,7 +2,6 @@ import math
 import os
 from functools import partial
 from typing import Dict, Optional
-
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
@@ -37,7 +36,8 @@ class AbstractDataModule(pl.LightningDataModule):
                  seed: int = None,
                  k_folds: int = 0,
                  dataset: type or partial = AbstractDataset,
-                 split_method: str = 'default'
+                 split_method: str = 'default',
+                 train_dataset: type or partial = None
                  ):
         super(AbstractDataModule, self).__init__()
         # path
@@ -80,6 +80,7 @@ class AbstractDataModule(pl.LightningDataModule):
         self.seed: int = randint(0, 2**32 - 1) if seed is None else seed
         # datasets
         self.dataset: type = dataset
+        self.train_dataset: type or partial = dataset if train_dataset is None else train_dataset
         random.seed(self.seed)
 
         self.split_method = split_method
@@ -162,17 +163,45 @@ class AbstractDataModule(pl.LightningDataModule):
             return series
         return None
 
+    def calculate_mean_std(self) -> None:
+        train_values = np.stack([item for _, item in self.data.iloc[self.splits['test']][self.source_name].iteritems()])
+        self.mean = np.mean(train_values)
+        self.std = np.std(train_values)
+        norm_idx = None
+        for idx, tr in enumerate(self.train_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.train_transforms.transforms[norm_idx].mean = self.mean
+            self.train_transforms.transforms[norm_idx].std = self.std
+
+        norm_idx = None
+        for idx, tr in enumerate(self.val_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.val_transforms.transforms[norm_idx].mean = self.mean
+            self.val_transforms.transforms[norm_idx].std = self.std
+
+        norm_idx = None
+        for idx, tr in enumerate(self.test_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.test_transforms.transforms[norm_idx].mean = self.mean
+            self.test_transforms.transforms[norm_idx].std = self.std
+
     def train_dataloader(self) -> DataLoader:
         """
         Prepares and returns train dataloader
         :return:
         """
         return DataLoader(
-            self.dataset(data_frame=self.data.iloc[self.splits['train']].reset_index(),
-                         transform=self.train_transforms,
-                         source_name=self.source_name,
-                         target_name=self.target_name,
-                         series_name=self.series_name),
+            self.train_dataset(data_frame=self.data.iloc[self.splits['train']].reset_index(),
+                               transform=self.train_transforms,
+                               source_name=self.source_name,
+                               target_name=self.target_name,
+                               series_name=self.series_name),
             shuffle=self.shuffle_train,
             batch_size=self.batch_size,
             num_workers=self.num_workers

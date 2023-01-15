@@ -38,8 +38,9 @@ class SequenceDataModule(AbstractDataModule):
                  seed: int = None,
                  dataset: type or partial = SequenceDataset,
                  feature_extraction_dataset: type or partial = AbstractDataset,
+                 train_dataset: type or partial = None,
                  window_length: int = 1,
-                 window_step: int = None,
+                 window_step: int = None
                  ):
         self.feature_extraction_dataset = feature_extraction_dataset
         self.feature_extraction: nn.Module = feature_extraction
@@ -69,7 +70,8 @@ class SequenceDataModule(AbstractDataModule):
             seed,
             0,
             dataset,
-            'default'
+            'default',
+            train_dataset
         )
 
     def prepare_data(self) -> None:

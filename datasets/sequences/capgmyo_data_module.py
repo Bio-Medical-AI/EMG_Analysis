@@ -28,6 +28,7 @@ class CapgMyoDataModule(SequenceDataModule):
                  seed: int = None,
                  dataset: type = SequenceDataset,
                  feature_extraction_dataset: type = AbstractDataset,
+                 train_dataset: type = None,
                  window_length: int = 1,
                  window_step: int = 1):
         df_path = os.path.join(PKL_FOLDER, 'CapgMyo', 'CapgMyo.pkl')
@@ -57,6 +58,7 @@ class CapgMyoDataModule(SequenceDataModule):
             seed,
             dataset,
             feature_extraction_dataset,
+            train_dataset,
             window_length,
             window_step
         )
