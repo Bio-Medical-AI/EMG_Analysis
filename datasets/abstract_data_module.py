@@ -3,11 +3,12 @@ import os
 from functools import partial
 from typing import Dict, Optional
 
+import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 from pandas import Index
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, ToTensor
+from torchvision.transforms import Compose, ToTensor, Normalize
 from random import randint
 import random
 
@@ -26,7 +27,7 @@ class AbstractDataModule(pl.LightningDataModule):
                  test_transforms: Compose = ToTensor(),
                  train_vs_rest_size: float = 0.8,
                  val_vs_test_size: float = 0.5,
-                 source_name: str = 'path',
+                 source_name: str = 'record',
                  target_name: str = 'label',
                  series_name: str = 'spectrograms',
                  subject_name: str = 'subject',
@@ -40,6 +41,8 @@ class AbstractDataModule(pl.LightningDataModule):
                  ):
         super(AbstractDataModule, self).__init__()
         # path
+        self.mean = None
+        self.std = None
         self.df_path: os.PathLike = df_path
         self.data: pd.DataFrame = pd.DataFrame()
         self.subjects = []
@@ -77,7 +80,6 @@ class AbstractDataModule(pl.LightningDataModule):
         self.seed: int = randint(0, 2**32 - 1) if seed is None else seed
         # datasets
         self.dataset: type = dataset
-        self.prepare_data()
         random.seed(self.seed)
 
         self.split_method = split_method
@@ -90,6 +92,7 @@ class AbstractDataModule(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         self.split_data()
+        self.calculate_mean_std()
 
     def split_data(self) -> None:
         if self.k_folds < 2:
@@ -97,10 +100,10 @@ class AbstractDataModule(pl.LightningDataModule):
                 train_series = self.get_random_series(self.data, proportion=self.train_vs_rest_size)
                 non_train_data = self.data.loc[~self.data[self.series_name].isin(train_series)]
                 val_series = self.get_random_series(non_train_data, proportion=self.val_vs_test_size)
-                test_series = list(set(self.subjects) - set(train_series) - set(val_series))
-                self.splits['train'] = self.data.index[self.data[self.subject_name].isin(train_series)]
-                self.splits['val'] = self.data.index[self.data[self.subject_name].isin(val_series)]
-                self.splits['test'] = self.data.index[self.data[self.subject_name].isin(test_series)]
+                test_series = list(set(self.series) - set(train_series) - set(val_series))
+                self.splits['train'] = self.data.index[self.data[self.series_name].isin(train_series)]
+                self.splits['val'] = self.data.index[self.data[self.series_name].isin(val_series)]
+                self.splits['test'] = self.data.index[self.data[self.series_name].isin(test_series)]
         else:
             if not self.splits:
                 tmp_data = self.data
@@ -115,6 +118,34 @@ class AbstractDataModule(pl.LightningDataModule):
                 self.splits['train'] = self.splits['train'].union(indexes)
             self.splits['val'] = self.folds[self.fold]
             self.splits['test'] = self.folds[(self.fold + 1) % self.k_folds]
+
+    def calculate_mean_std(self) -> None:
+        train_values = np.stack([item for _, item in self.data.iloc[self.splits['test']][self.source_name].iteritems()])
+        self.mean = np.mean(train_values)
+        self.std = np.std(train_values)
+        norm_idx = None
+        for idx, tr in enumerate(self.train_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.train_transforms.transforms[norm_idx].mean = self.mean
+            self.train_transforms.transforms[norm_idx].std = self.std
+
+        norm_idx = None
+        for idx, tr in enumerate(self.val_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.val_transforms.transforms[norm_idx].mean = self.mean
+            self.val_transforms.transforms[norm_idx].std = self.std
+
+        norm_idx = None
+        for idx, tr in enumerate(self.test_transforms.transforms):
+            if type(tr) is Normalize:
+                norm_idx = idx
+        if norm_idx is not None:
+            self.test_transforms.transforms[norm_idx].mean = self.mean
+            self.test_transforms.transforms[norm_idx].std = self.std
 
     def get_random_series(self, data: pd.DataFrame, proportion: float) -> list or None:
         if self.split_method == 'default':
@@ -188,3 +219,8 @@ class AbstractDataModule(pl.LightningDataModule):
     def next_fold(self):
         if self.k_folds > 2:
             self.set_fold(self.fold + 1)
+
+    def get_splits_series(self) -> Dict:
+        return {'train': self.data.iloc[self.splits['train']][self.series_name].unique(),
+                'val': self.data.iloc[self.splits['val']][self.series_name].unique(),
+                'test': self.data.iloc[self.splits['test']][self.series_name].unique()}

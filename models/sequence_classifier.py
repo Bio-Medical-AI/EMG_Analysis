@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch.optim import Optimizer
 from torchmetrics import MetricCollection
 from models import CRNN
+from torch.nn.utils.rnn import pack_padded_sequence
 
 from models import Classifier
 
@@ -33,19 +34,17 @@ class SequenceClassifier(Classifier):
             window_fix=window_fix,
             metrics=metrics,
             **kwargs)
-        self.batch_size = self.model.sequence_length
 
     def _step(self, batch: Dict[str, Tensor or Any]) -> Dict[str, Tensor or Any]:
-        batch['data'] = batch['data'][0]
-        if len(batch['data'].shape) == 3:
-            batch['data'] = batch['data'][None].permute((1, 0, 2, 3)).contiguous()
-        elif len(batch['data'].shape) == 2:
-            batch['data'] = batch['data'][None, None, :, :].permute((2, 1, 0, 3)).contiguous()
-        elif len(batch['data'].shape) == 1:
-            batch['data'] = batch['data'][None, None, None, :].permute((3, 1, 2, 0)).contiguous()
-        batch['label'] = torch.ones(batch['data'].shape[0], device=self.device, dtype=torch.long) * batch['label'][0]
-        batch['spectrograms'] = \
-            torch.ones(batch['data'].shape[0], device=self.device, dtype=torch.long) * batch['spectrograms'][0]
-        batch['index'] = torch.from_numpy(np.arange(batch['data'].shape[0])).to(self.device) + \
-                         self.batch_size * batch['index'][0]
+        batch['label'] = torch.cat(
+            [torch.ones(length, device=self.device, dtype=torch.long) * label
+             for label, length in zip(batch['label'], batch['length'])])
+        batch['spectrograms'] = torch.cat(
+            [torch.ones(length, device=self.device, dtype=torch.long) * spec
+             for spec, length in zip(batch['spectrograms'], batch['length'])])
+        batch['index'] = torch.cat(
+            [torch.arange(length, device=self.device, dtype=torch.long) +
+             batch['data'].shape[2] * idx for idx, length in zip(batch['index'], batch['length'])])
+        batch['data'] = pack_padded_sequence(torch.squeeze(batch['data']), batch['length'].cpu(), batch_first=True,
+                                             enforce_sorted=False)
         return super()._step(batch)

@@ -21,7 +21,7 @@ class SpectrogramDataModule(AbstractDataModule):
                  test_transforms: Compose = ToTensor(),
                  train_vs_rest_size: float = 0.8,
                  val_vs_test_size: float = 0.5,
-                 source_name: str = 'path',
+                 source_name: str = 'record',
                  target_name: str = 'label',
                  series_name: str = 'spectrograms',
                  subject_name: str = 'subject',
@@ -63,26 +63,30 @@ class SpectrogramDataModule(AbstractDataModule):
         self.locations: Dict[str, List] = {}
 
     def setup(self, stage: Optional[str] = None) -> None:
-        self.split_data()
+        super().setup(stage)
         self.calculate_locations()
 
     def calculate_locations(self) -> None:
-        if self.k_folds < 2:
-            if not self.locations:
-                self.locations = {}
-                for key in self.splits.keys():
-                    self.locations[key] = self.get_locations(self.data.iloc[self.splits[key]])
-        else:
-            if not self.locations:
-                for idx, fold in enumerate(self.folds):
-                    self.locations[str(idx)] = self.get_locations(self.data.iloc[fold])
+        self.locations = {}
+        for key in self.splits.keys():
+            self.locations[key] = self.get_locations(self.data.iloc[self.splits[key]])
 
-            self.locations['train'] = []
-            for indexes in \
-                    [str(idx) for idx in range(self.k_folds) if idx not in [self.fold, (self.fold + 1) % self.k_folds]]:
-                self.locations['train'] += self.locations[indexes]
-            self.locations['val'] = self.locations[str(self.fold)]
-            self.locations['test'] = self.locations[str((self.fold + 1) % self.k_folds)]
+        # if self.k_folds < 2:
+        #     if not self.locations:
+        #         self.locations = {}
+        #         for key in self.splits.keys():
+        #             self.locations[key] = self.get_locations(self.data.iloc[self.splits[key]])
+        # else:
+        #     if not self.locations:
+        #         for idx, fold in enumerate(self.folds):
+        #             self.locations[str(idx)] = self.get_locations(self.data.iloc[fold])
+        #
+        #     self.locations['train'] = []
+        #     for indexes in \
+        #             [str(idx) for idx in range(self.k_folds) if idx not in [self.fold, (self.fold + 1) % self.k_folds]]:
+        #         self.locations['train'] += self.locations[indexes]
+        #     self.locations['val'] = self.locations[str(self.fold)]
+        #     self.locations['test'] = self.locations[str((self.fold + 1) % self.k_folds)]
 
     def get_locations(self, data_frame: pd.DataFrame) -> list:
         locations = pd.Index([])

@@ -1,12 +1,18 @@
 import os
+from typing import Dict
+
+from torch import nn
 from torchvision.transforms import Compose, ToTensor
 
-from datasets import prepare_csl, prepare_dataframe_dataset, SequenceDataModule, AbstractDataset
+from datasets import prepare_csl, prepare_dataframe_dataset, SequenceDataModule, SequenceDataset, AbstractDataset
 from definitions import PKL_FOLDER
 
 
 class CslDataModule(SequenceDataModule):
     def __init__(self,
+                 feature_extraction: nn.Module,
+                 splits_series: Dict,
+                 feature_extraction_transforms: Compose = ToTensor(),
                  train_transforms: Compose = ToTensor(),
                  val_transforms: Compose = ToTensor(),
                  test_transforms: Compose = ToTensor(),
@@ -20,9 +26,10 @@ class CslDataModule(SequenceDataModule):
                  num_workers: int = 8,
                  shuffle_train: bool = True,
                  seed: int = None,
-                 k_folds: int = 0,
-                 dataset: type = AbstractDataset,
-                 split_method: str = 'default'):
+                 dataset: type = SequenceDataset,
+                 feature_extraction_dataset: type = AbstractDataset,
+                 window_length: int = 1,
+                 window_step: int = 1):
         df_path = os.path.join(PKL_FOLDER, 'csl-hdemg', 'csl-hdemg.pkl')
         if not os.path.isfile(df_path):
             prepare_csl(prepare_dataframe_dataset, PKL_FOLDER)
@@ -32,6 +39,9 @@ class CslDataModule(SequenceDataModule):
             24,
             1,
             27,
+            feature_extraction,
+            splits_series,
+            feature_extraction_transforms,
             train_transforms,
             val_transforms,
             test_transforms,
@@ -45,6 +55,7 @@ class CslDataModule(SequenceDataModule):
             num_workers,
             shuffle_train,
             seed,
-            k_folds,
             dataset,
-            split_method)
+            feature_extraction_dataset,
+            window_length,
+            window_step)

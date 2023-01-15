@@ -116,7 +116,7 @@ def get_capgmyo_dataset() -> pd.DataFrame:
                     'data')
                 size = data.shape[0]
                 labels.extend([gesture - 1 for _ in range(size)])
-                data = np.split(data.reshape((size, 16, 8)), size)
+                data = np.split(data.reshape((size, 16, 8)).transpose(0, 2, 1), size)
                 recordings.extend(data)
                 series.extend(
                     [(recording - 1) + (gesture - 1) * 10 + (test_object - 1) * 80 for _ in range(size)])

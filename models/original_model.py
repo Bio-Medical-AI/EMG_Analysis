@@ -1,6 +1,42 @@
+from typing import Any
+
 import torch
 from torch import Tensor
 import torch.nn as nn
+from torch.nn.functional import pad
+from functools import partial
+
+
+class Conv2dCylindrical(nn.Module):
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: int | tuple[int, int],
+                 stride: int | tuple[int, int] = 1,
+                 padding: tuple[int, int] = 0,
+                 dilation: int | tuple[int, int] = 1,
+                 groups: int = 1,
+                 bias: bool = True,
+                 device: Any = None,
+                 dtype: Any = None) -> None:
+        super().__init__()
+
+        self.conv2d = nn.Conv2d(in_channels=in_channels,
+                                out_channels=out_channels,
+                                kernel_size=kernel_size,
+                                stride=stride,
+                                dilation=dilation,
+                                groups=groups,
+                                bias=bias,
+                                device=device,
+                                dtype=dtype)
+        self.horizontal_pad = partial(pad, pad=(0, 0, padding[1], padding[1]), mode='circular')
+        self.vertical_pad = partial(pad, pad=(padding[0], padding[0]), mode='constant', value=0)
+
+    def forward(self, x: Tensor) -> Tensor:
+        h = self.horizontal_pad(x)
+        v = self.vertical_pad(h)
+        return self.conv2d(v)
 
 
 class OriginalModel(nn.Module):
@@ -11,10 +47,10 @@ class OriginalModel(nn.Module):
                  channels: int):
         super().__init__()
         self.model = nn.Sequential(
-            nn.Conv2d(channels, 64, (3, 3), (1, 1), (1, 1)),
+            Conv2dCylindrical(channels, 64, (3, 3), (1, 1), (1, 1)),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.Conv2d(64, 64, (3, 3), (1, 1), (1, 1)),
+            Conv2dCylindrical(64, 64, (3, 3), (1, 1), (1, 1)),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Conv2d(64, 64, (1, 1)),

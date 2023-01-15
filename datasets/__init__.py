@@ -6,3 +6,5 @@ from datasets.spectrogram_dataset import SpectrogramDataset
 from datasets.spectrogram_data_module import SpectrogramDataModule
 from datasets.derivative_dataset import DerivativeDataset
 from datasets.sequence_data_module import SequenceDataModule
+from datasets.augmented_dataset import AugmentedDataset
+from datasets.sequence_dataset import SequenceDataset
