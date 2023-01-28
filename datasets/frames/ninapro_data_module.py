@@ -1,7 +1,7 @@
 import os
 from torchvision.transforms import Compose, ToTensor
 
-from datasets import prepare_ninapro, prepare_dataframe_dataset, AbstractDataModule, AbstractDataset
+from datasets import prepare_ninapro, prepare_dataframe_dataset, AbstractDataModule, SequenceDataset
 from definitions import PKL_FOLDER
 
 
@@ -21,15 +21,16 @@ class NinaProDataModule(AbstractDataModule):
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type = AbstractDataset,
+                 dataset: type = SequenceDataset,
                  split_method: str = 'default',
-                 train_dataset: type = None):
+                 train_dataset: type = None,
+                 window_length: int = 1):
         df_path = os.path.join(PKL_FOLDER, 'NinaPro', 'NinaPro.pkl')
         if not os.path.isfile(df_path):
             prepare_ninapro(prepare_dataframe_dataset, PKL_FOLDER)
         super(NinaProDataModule, self).__init__(
             df_path,
-            1,
+            window_length,
             10,
             1,
             52,
@@ -49,4 +50,9 @@ class NinaProDataModule(AbstractDataModule):
             k_folds,
             dataset,
             split_method,
-            train_dataset)
+            train_dataset,
+            window_length)
+
+    def set_window_length(self, new_length: int) -> None:
+        super().set_window_length(new_length)
+        self.width = new_length

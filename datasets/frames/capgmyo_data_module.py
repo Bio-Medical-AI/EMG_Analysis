@@ -2,7 +2,7 @@ import os
 
 from torchvision.transforms import Compose, ToTensor
 
-from datasets import prepare_capgmyo, prepare_dataframe_dataset, AbstractDataModule, AbstractDataset
+from datasets import prepare_capgmyo, prepare_dataframe_dataset, AbstractDataModule, SequenceDataset
 from definitions import PKL_FOLDER
 
 
@@ -22,9 +22,10 @@ class CapgMyoDataModule(AbstractDataModule):
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type = AbstractDataset,
+                 dataset: type = SequenceDataset,
                  split_method: str = 'default',
-                 train_dataset: type = None):
+                 train_dataset: type = None,
+                 window_length: int = 1):
         df_path = os.path.join(PKL_FOLDER, 'CapgMyo', 'CapgMyo.pkl')
         if not os.path.isfile(df_path):
             prepare_capgmyo(prepare_dataframe_dataset, PKL_FOLDER)
@@ -32,7 +33,7 @@ class CapgMyoDataModule(AbstractDataModule):
             df_path,
             16,
             8,
-            1,
+            window_length,
             8,
             train_transforms,
             val_transforms,
@@ -50,4 +51,9 @@ class CapgMyoDataModule(AbstractDataModule):
             k_folds,
             dataset,
             split_method,
-            train_dataset)
+            train_dataset,
+            window_length)
+
+    def set_window_length(self, new_length: int) -> None:
+        super().set_window_length(new_length)
+        self.channels = new_length

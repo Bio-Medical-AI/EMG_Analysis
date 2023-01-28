@@ -81,8 +81,8 @@ def xgb_cross_val_experiments_file(data_module: AbstractDataModule, model_files:
 
 def lstm_cross_val_experiment(data_module: AbstractDataModule, partial_classifier: partial,
                               partial_seq_classifier: partial, name: str, max_epochs: int, max_seq_epochs: int,
-                              sequence_model: partial = partial(UniLSTM), callbacks: list = None,
-                              seq_callbacks: list = None, model_checkpoint_index: int = None,
+                              metrics: MetricCollection, sequence_model: partial = partial(UniLSTM),
+                              callbacks: list = None, seq_callbacks: list = None, model_checkpoint_index: int = None,
                               project: str = "EMG Armband", save_dir: str = 'wandb_logs', seed: int = 0,
                               classifier_params: dict = {}, model_type: type(nn.Module) = OriginalModel):
     pl.seed_everything(seed, workers=True)
@@ -91,7 +91,7 @@ def lstm_cross_val_experiment(data_module: AbstractDataModule, partial_classifie
     k_folds = data_module.k_folds
     for k in tqdm(range(k_folds)):
         classifier = partial_classifier(
-            model_type(**classifier_params))
+            model_type(**classifier_params), metrics=metrics)
         logger = WandbLogger(project=project, name=name, save_dir=save_dir)
         if callbacks:
             callbacks_initialized = [callback() for callback in callbacks]
@@ -117,6 +117,8 @@ def lstm_cross_val_experiment(data_module: AbstractDataModule, partial_classifie
                                              num_classes=data_module.num_classes,
                                              feature_extraction=seq_model,
                                              splits_series=data_module.get_splits_series(),
+                                             feature_extraction_dataset=
+                                             partial(data_module.dataset, window_length=data_module.window_length),
                                              feature_extraction_transforms=data_module.test_transforms,
                                              window_length=100000)
 
@@ -131,7 +133,7 @@ def lstm_cross_val_experiment(data_module: AbstractDataModule, partial_classifie
 
         logger = WandbLogger(project=project, name='lstm ' + name, save_dir=save_dir)
         if seq_callbacks:
-            callbacks_initialized = [callback() for callback in callbacks]
+            callbacks_initialized = [callback() for callback in seq_callbacks]
         else:
             callbacks_initialized = None
         trainer = pl.Trainer(gpus=-1, max_epochs=max_seq_epochs, logger=logger, accelerator="gpu",

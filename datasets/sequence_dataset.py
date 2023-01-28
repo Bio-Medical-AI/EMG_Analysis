@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 from torchvision.transforms import Compose, ToTensor
-from datasets import AbstractDataset
+from datasets.abstract_dataset import AbstractDataset
 
 
 class SequenceDataset(AbstractDataset):

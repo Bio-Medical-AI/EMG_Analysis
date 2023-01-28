@@ -44,7 +44,6 @@ class SequenceDataModule(AbstractDataModule):
                  ):
         self.feature_extraction_dataset = feature_extraction_dataset
         self.feature_extraction: nn.Module = feature_extraction
-        self.window_length: int = window_length
         self.window_step: int = window_step
         self.splits_series = splits_series
         self.feature_extraction_transforms = feature_extraction_transforms
@@ -71,7 +70,8 @@ class SequenceDataModule(AbstractDataModule):
             0,
             dataset,
             'default',
-            train_dataset
+            train_dataset,
+            window_length
         )
 
     def prepare_data(self) -> None:
@@ -84,7 +84,7 @@ class SequenceDataModule(AbstractDataModule):
                                             source_name=self.source_name,
                                             target_name=self.target_name,
                                             series_name=self.series_name),
-            batch_size=self.window_length,
+            batch_size=int(self.window_length),
             num_workers=self.num_workers
         )
         device = torch.device('cpu')
@@ -140,3 +140,49 @@ class SequenceDataModule(AbstractDataModule):
         self.splits['train'] = self.data.index[self.data[self.subject_name].isin(self.splits_series['train'])]
         self.splits['val'] = self.data.index[self.data[self.subject_name].isin(self.splits_series['val'])]
         self.splits['test'] = self.data.index[self.data[self.subject_name].isin(self.splits_series['test'])]
+
+    def train_dataloader(self) -> DataLoader:
+        """
+        Prepares and returns train dataloader
+        :return:
+        """
+        return DataLoader(
+            self.train_dataset(data_frame=self.data.iloc[self.splits['train']].reset_index(),
+                               transform=self.train_transforms,
+                               source_name=self.source_name,
+                               target_name=self.target_name,
+                               series_name=self.series_name),
+            shuffle=self.shuffle_train,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers
+        )
+
+    def val_dataloader(self) -> DataLoader:
+        """
+        Prepares and returns validate dataloader
+        :return:
+        """
+        return DataLoader(
+            self.dataset(data_frame=self.data.iloc[self.splits['val']].reset_index(),
+                         transform=self.val_transforms,
+                         source_name=self.source_name,
+                         target_name=self.target_name,
+                         series_name=self.series_name),
+            batch_size=self.batch_size,
+            num_workers=self.num_workers
+        )
+
+    def test_dataloader(self) -> DataLoader:
+        """
+        Prepares and returns test dataloader
+        :return:
+        """
+        return DataLoader(
+            self.dataset(data_frame=self.data.iloc[self.splits['test']].reset_index(),
+                         transform=self.test_transforms,
+                         source_name=self.source_name,
+                         target_name=self.target_name,
+                         series_name=self.series_name),
+            batch_size=self.batch_size,
+            num_workers=self.num_workers
+        )

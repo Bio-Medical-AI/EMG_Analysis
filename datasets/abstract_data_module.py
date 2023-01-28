@@ -11,7 +11,7 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 from random import randint
 import random
 
-from datasets.abstract_dataset import AbstractDataset
+from datasets.spectrogram_dataset import SpectrogramDataset
 
 
 class AbstractDataModule(pl.LightningDataModule):
@@ -35,12 +35,13 @@ class AbstractDataModule(pl.LightningDataModule):
                  shuffle_train: bool = True,
                  seed: int = None,
                  k_folds: int = 0,
-                 dataset: type or partial = AbstractDataset,
+                 dataset: type or partial = SpectrogramDataset,
                  split_method: str = 'default',
-                 train_dataset: type or partial = None
+                 train_dataset: type or partial = None,
+                 window_length: int = 1
                  ):
         super(AbstractDataModule, self).__init__()
-        # path
+        self.window_length = window_length
         self.mean = None
         self.std = None
         self.df_path: os.PathLike = df_path
@@ -48,12 +49,10 @@ class AbstractDataModule(pl.LightningDataModule):
         self.subjects = []
         self.series = []
         self.targets = []
-        # data_parameters
         self.width = width
         self.height = height
         self.channels = channels
         self.num_classes = num_classes
-        # split sizes
         self.k_folds = k_folds
         if self.k_folds < 3:
             self.train_vs_rest_size = train_vs_rest_size
@@ -62,23 +61,18 @@ class AbstractDataModule(pl.LightningDataModule):
             self.k_folds = k_folds
             self.fold = 0
             self.folds = []
-        # transforms
         self.train_transforms: Compose = train_transforms
         self.val_transforms: Compose = val_transforms
         self.test_transforms: Compose = test_transforms
-        # column names
         self.source_name: str = source_name
         self.target_name: str = target_name
         self.series_name: str = series_name
         self.subject_name: str = subject_name
-        # dataset parameters
         self.batch_size: int = batch_size
         self.num_workers: int = num_workers
         self.shuffle_train: bool = shuffle_train
-        # main dataframes
         self.splits: Dict[str, Index] = {}
         self.seed: int = randint(0, 2**32 - 1) if seed is None else seed
-        # datasets
         self.dataset: type = dataset
         self.train_dataset: type or partial = dataset if train_dataset is None else train_dataset
         random.seed(self.seed)
@@ -201,7 +195,8 @@ class AbstractDataModule(pl.LightningDataModule):
                                transform=self.train_transforms,
                                source_name=self.source_name,
                                target_name=self.target_name,
-                               series_name=self.series_name),
+                               series_name=self.series_name,
+                               window_length=self.window_length),
             shuffle=self.shuffle_train,
             batch_size=self.batch_size,
             num_workers=self.num_workers
@@ -217,7 +212,8 @@ class AbstractDataModule(pl.LightningDataModule):
                          transform=self.val_transforms,
                          source_name=self.source_name,
                          target_name=self.target_name,
-                         series_name=self.series_name),
+                         series_name=self.series_name,
+                         window_length=self.window_length),
             batch_size=self.batch_size,
             num_workers=self.num_workers
         )
@@ -232,20 +228,21 @@ class AbstractDataModule(pl.LightningDataModule):
                          transform=self.test_transforms,
                          source_name=self.source_name,
                          target_name=self.target_name,
-                         series_name=self.series_name),
+                         series_name=self.series_name,
+                         window_length=self.window_length),
             batch_size=self.batch_size,
             num_workers=self.num_workers
         )
 
-    def get_data_parameters(self):
+    def get_data_parameters(self) -> Dict:
         return {'num_classes': self.num_classes, 'input_width': self.width, 'input_height': self.height,
                 'channels': self.channels}
 
-    def set_fold(self, fold: int):
+    def set_fold(self, fold: int) -> None:
         if self.k_folds > 2:
             self.fold = fold % self.k_folds
 
-    def next_fold(self):
+    def next_fold(self) -> None:
         if self.k_folds > 2:
             self.set_fold(self.fold + 1)
 
@@ -253,3 +250,6 @@ class AbstractDataModule(pl.LightningDataModule):
         return {'train': self.data.iloc[self.splits['train']][self.series_name].unique(),
                 'val': self.data.iloc[self.splits['val']][self.series_name].unique(),
                 'test': self.data.iloc[self.splits['test']][self.series_name].unique()}
+
+    def set_window_length(self, new_length: int) -> None:
+        self.window_length = new_length
