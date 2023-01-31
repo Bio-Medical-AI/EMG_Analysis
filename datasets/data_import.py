@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Callable
 
 import scipy.io
@@ -37,6 +38,16 @@ def prepare_ninapro(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFra
 def prepare_myoarmband(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                        final_path: str) -> None:
     prepare_dataset('MyoArmband', '1dO72tvtx5HOzZZ0C56IIUdCIVO3nNGt5', get_myoarmband_dataset, final_path)
+
+
+def prepare_knibm_low(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
+                       final_path: str) -> None:
+    prepare_dataset('knibm-low', '1N0xs9oAk_DLIu4hR_Caen4h4kEiGsWNe', partial(get_knibm_dataset, "low"), final_path)
+
+
+def prepare_knibm_high(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
+                       final_path: str) -> None:
+    prepare_dataset('knibm-high', '1N0xs9oAk_DLIu4hR_Caen4h4kEiGsWNe', partial(get_knibm_dataset, "high"), final_path)
 
 
 final_folder = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data')
@@ -241,6 +252,61 @@ def get_myoarmband_dataset() -> pd.DataFrame:
     dataset2 = get_dataset(pre_path, subjects2, 'training0', 1512)
     final_dataset = pd.concat([dataset, dataset2], ignore_index=True)
     return final_dataset
+
+
+def get_knibm_dataset(version: str = "low") -> pd.DataFrame:
+    def bin_2_ndarray(input_file: str, data_bits: int = 8, channel_cnt: int = 8) -> np.ndarray:
+        input_file = get_absolute_path(input_file)
+        if data_bits == 12:
+            byte_size = 2
+        elif data_bits == 8:
+            byte_size = 1
+        else:
+            print("data bits should be 8 or 12. Setting to 8")
+            byte_size = 1
+
+        file = open(input_file, 'rb')
+        file.seek(0, 2)
+        file_size = file.tell()
+        file.seek(0, 0)
+
+        loop_count = int(file_size / byte_size)
+        records = []
+        record = []
+        for i in range(loop_count):
+            val = 0
+            data_bytes = file.read(byte_size)
+
+            for j in range(len(data_bytes)):
+                val = (val << 8) | data_bytes[j]
+
+            record.append(val)
+            if (i % channel_cnt) == channel_cnt - 1:
+                records.append(np.array(record, dtype=float))
+                record = []
+
+        file.close()
+        return np.array(records, dtype=float)
+
+    recordings = []
+    labels = []
+    series = []
+    subjects = []
+    for subject in range(1, 2):
+        for session in range(1, 4):
+            for gest in range(1, 9):
+                data = bin_2_ndarray(os.path.join(
+                    os.path.dirname(os.getcwd()),
+                    'data',
+                    f'knibm-{version}',
+                    f'{str(subject)}',
+                    f'{str(session)}',
+                    f'{str(gest)}.bin'))
+                recordings.extend([data[i] for i in range(data.shape[0])])
+                labels.extend([gest - 1 for _ in range(data.shape[0])])
+                series.extend([(session - 1) * 8 + gest - 1 for _ in range(data.shape[0])])
+                subjects.extend([subject for _ in range(data.shape[0])])
+    return pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
 
 
 def save_arrays(dataframe: pd.DataFrame, name: str, path: os.path) -> pd.DataFrame:

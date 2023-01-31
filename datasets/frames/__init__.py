@@ -1,3 +1,5 @@
 from datasets.frames.capgmyo_data_module import CapgMyoDataModule
 from datasets.frames.ninapro_data_module import NinaProDataModule
 from datasets.frames.myoarmband_data_module import MyoArmbandDataModule
+from datasets.frames.knibm_low_data_module import KNIBMLowDataModule
+from datasets.frames.knibm_high_data_module import KNIBMHighDataModule
