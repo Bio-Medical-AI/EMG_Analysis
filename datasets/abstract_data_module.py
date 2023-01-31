@@ -157,34 +157,6 @@ class AbstractDataModule(pl.LightningDataModule):
             return series
         return None
 
-    def calculate_mean_std(self) -> None:
-        train_values = np.stack([item for _, item in self.data.iloc[self.splits['test']][self.source_name].iteritems()])
-        self.mean = np.mean(train_values)
-        self.std = np.std(train_values)
-        norm_idx = None
-        for idx, tr in enumerate(self.train_transforms.transforms):
-            if type(tr) is Normalize:
-                norm_idx = idx
-        if norm_idx is not None:
-            self.train_transforms.transforms[norm_idx].mean = self.mean
-            self.train_transforms.transforms[norm_idx].std = self.std
-
-        norm_idx = None
-        for idx, tr in enumerate(self.val_transforms.transforms):
-            if type(tr) is Normalize:
-                norm_idx = idx
-        if norm_idx is not None:
-            self.val_transforms.transforms[norm_idx].mean = self.mean
-            self.val_transforms.transforms[norm_idx].std = self.std
-
-        norm_idx = None
-        for idx, tr in enumerate(self.test_transforms.transforms):
-            if type(tr) is Normalize:
-                norm_idx = idx
-        if norm_idx is not None:
-            self.test_transforms.transforms[norm_idx].mean = self.mean
-            self.test_transforms.transforms[norm_idx].std = self.std
-
     def train_dataloader(self) -> DataLoader:
         """
         Prepares and returns train dataloader

@@ -137,9 +137,9 @@ class SequenceDataModule(AbstractDataModule):
         self.split_data()
 
     def split_data(self) -> None:
-        self.splits['train'] = self.data.index[self.data[self.subject_name].isin(self.splits_series['train'])]
-        self.splits['val'] = self.data.index[self.data[self.subject_name].isin(self.splits_series['val'])]
-        self.splits['test'] = self.data.index[self.data[self.subject_name].isin(self.splits_series['test'])]
+        self.splits['train'] = self.data.index[self.data[self.series_name].isin(self.splits_series['train'])]
+        self.splits['val'] = self.data.index[self.data[self.series_name].isin(self.splits_series['val'])]
+        self.splits['test'] = self.data.index[self.data[self.series_name].isin(self.splits_series['test'])]
 
     def train_dataloader(self) -> DataLoader:
         """
