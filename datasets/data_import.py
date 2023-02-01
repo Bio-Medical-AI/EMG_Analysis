@@ -187,17 +187,17 @@ def get_ninapro_dataset() -> pd.DataFrame:
                 'stimulus')
             recordings.extend([d.reshape(10, -1) for d in data])
             labels.extend(gesture[:, 0])
-            counter = 1 + last_series
-            series.append(counter)
-            previous = gesture[0, 0]
-            for gest in gesture[1:, 0]:
-                if gest != previous:
-                    counter += 1
-                previous = gest
-                series.append(counter)
-            last_series = counter
-            # spectrograms.extend([(session - 1) + (subject - 1) * 3 for _ in range(gesture.shape[0])])
+            # counter = 1 + last_series
+            # series.append(counter)
+            # previous = gesture[0, 0]
+            # for gest in gesture[1:, 0]:
+            #     if gest != previous:
+            #         counter += 1
+            #     previous = gest
+            #     series.append(counter)
+            # last_series = counter
             subjects.extend([subject for _ in range(gesture.shape[0])])
+            series.extend([(subject-1) * 3 + (session-1) for _ in range(gesture.shape[0])])
 
     return pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
 

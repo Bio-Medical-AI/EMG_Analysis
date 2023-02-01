@@ -37,8 +37,7 @@ class SequenceClassifier(Classifier):
 
     def _step(self, batch: Dict[str, Tensor or Any]) -> Dict[str, Tensor or Any]:
         batch['label'] = torch.cat(
-            [torch.ones(length, device=self.device, dtype=torch.long) * label
-             for label, length in zip(batch['label'], batch['length'])])
+            [labels[:length] for labels, length in zip(batch['label'], batch['length'])])
         batch['spectrograms'] = torch.cat(
             [torch.ones(length, device=self.device, dtype=torch.long) * spec
              for spec, length in zip(batch['spectrograms'], batch['length'])])

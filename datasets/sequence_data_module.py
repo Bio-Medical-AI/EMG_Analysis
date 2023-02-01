@@ -102,7 +102,7 @@ class SequenceDataModule(AbstractDataModule):
         for s in self.series:
             records = self.data[self.data[self.series_name] == s].reset_index()
             sources = records[self.source_name]
-            targets = records.at[0, self.target_name]
+            targets = records[self.target_name]
             series = records.at[0, self.series_name]
             subjects = records.at[0, self.subject_name]
             iters = (len(records) - self.window_length) // self.window_step + 1
@@ -110,7 +110,8 @@ class SequenceDataModule(AbstractDataModule):
             all_sources += [
                 torch.stack(sources[i*self.window_step:i*self.window_step+self.window_length].tolist()).numpy() for i in
                 range(iters)]
-            all_targets += [targets for _ in range(iters)]
+            all_targets += [np.array(targets[i*self.window_step:i*self.window_step+self.window_length].tolist())
+                            for i in range(iters)]
             all_series += [series for _ in range(iters)]
             all_subjects += [subjects for _ in range(iters)]
             all_lengths += [self.window_length for _ in range(iters)]
@@ -122,7 +123,12 @@ class SequenceDataModule(AbstractDataModule):
                             sources[iters * self.window_step:len(records)].tolist()
                         ),
                         (0, 0, 0, self.window_length - length), "constant", 0.).numpy())
-                all_targets.append(targets)
+                all_targets.append(
+                    pad(
+                        torch.Tensor(
+                            targets[iters * self.window_step:len(records)].tolist()
+                        ),
+                        (0, self.window_length - length), "constant", 0.).numpy())
                 all_series.append(series)
                 all_subjects.append(subjects)
                 all_lengths.append(length)
