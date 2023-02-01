@@ -128,10 +128,10 @@ class Classifier(pl.LightningModule):
             for i in range((df.shape[0] - window) // step + 1):
                 tmp = df.iloc[(i * step):(i * step + window)]
                 preds.append(tmp['preds'].values.tolist())
-                labels.append(tmp['labels'].head(1).item())
+                labels.append(tmp['labels'].values.tolist())
             return {'preds_list': preds, 'labels_list': labels}
         else:
-            return {'preds': df['preds'].mode()[0].item(), 'labels': df['labels'].head(1).item()}
+            return {'preds': df['preds'].mode()[0].item(), 'labels': df['labels'].mode()[0].item()}
 
     def _majority_voting(self, df: pd.DataFrame, window: int, step: int) -> STEP_OUTPUT:
         preds = []
@@ -148,7 +148,7 @@ class Classifier(pl.LightningModule):
                 preds.append(results['preds'])
                 labels.append(results['labels'])
         preds += torch.mode(torch.Tensor(preds_list))[0].int().tolist()
-        labels += labels_list
+        labels += torch.mode(torch.Tensor(labels_list))[0].int().tolist()
 
         majority_preds = torch.tensor(preds, device=self.device)
         majority_labels = torch.tensor(labels, device=self.device)
