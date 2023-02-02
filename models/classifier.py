@@ -80,7 +80,7 @@ class Classifier(pl.LightningModule):
 
     def validation_epoch_end(self, validation_step_outputs: EPOCH_OUTPUT) -> None:
         results = self._epoch_end(validation_step_outputs)
-        results = self._eval_epoch_end(results)
+        results = self._eval_epoch_end(results)['measurements']
         logs = self._add_prefix_to_metrics('val/', results)
         self.log_dict(logs)
 
@@ -91,6 +91,7 @@ class Classifier(pl.LightningModule):
     def test_epoch_end(self, test_step_outputs: EPOCH_OUTPUT) -> None:
         results = self._epoch_end(test_step_outputs)
         results = self._eval_epoch_end(results)
+        results = self._vote(results)['measurements']
         logs = self._add_prefix_to_metrics('test/', results)
 
         self.log_dict(logs)
@@ -128,10 +129,10 @@ class Classifier(pl.LightningModule):
             for i in range((df.shape[0] - window) // step + 1):
                 tmp = df.iloc[(i * step):(i * step + window)]
                 preds.append(tmp['preds'].values.tolist())
-                labels.append(tmp['labels'].head(1).item())
+                labels.append(tmp['labels'].values.tolist())
             return {'preds_list': preds, 'labels_list': labels}
         else:
-            return {'preds': df['preds'].mode()[0].item(), 'labels': df['labels'].head(1).item()}
+            return {'preds': df['preds'].mode()[0].item(), 'labels': df['labels'].mode()[0].item()}
 
     def _majority_voting(self, df: pd.DataFrame, window: int, step: int) -> STEP_OUTPUT:
         preds = []
@@ -148,7 +149,7 @@ class Classifier(pl.LightningModule):
                 preds.append(results['preds'])
                 labels.append(results['labels'])
         preds += torch.mode(torch.Tensor(preds_list))[0].int().tolist()
-        labels += labels_list
+        labels += torch.mode(torch.Tensor(labels_list))[0].int().tolist()
 
         majority_preds = torch.tensor(preds, device=self.device)
         majority_labels = torch.tensor(labels, device=self.device)
@@ -183,6 +184,11 @@ class Classifier(pl.LightningModule):
         measurements = step_outputs['measurements']
         measurements.update({'loss': statistics.fmean(output['loss'])})
         output.pop('loss', None)
+        return {'output': output, 'measurements': measurements}
+
+    def _vote(self, step_outputs: STEP_OUTPUT) -> STEP_OUTPUT:
+        output = step_outputs['output']
+        measurements = step_outputs['measurements']
         df = pd.DataFrame(output).sort_values(by=['index'])
         if self.window_fix is None:
             for window, step in zip(self.time_window, self.time_step):
@@ -192,8 +198,7 @@ class Classifier(pl.LightningModule):
             for window, step, fix in zip(self.time_window, self.time_step, self.window_fix):
                 results = self._majority_voting(df, window, step)
                 measurements.update(self._add_prefix_to_metrics(f'{window + fix}_{step}/', results))
-
-        return measurements
+        return {'output': output, 'measurements': measurements}
 
     def _connect_epoch_results(self, step_outputs: List[Dict[str, Tensor or Any]], key: str):
         to_concat = []

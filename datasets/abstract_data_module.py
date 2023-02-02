@@ -143,7 +143,7 @@ class AbstractDataModule(pl.LightningDataModule):
             self.test_transforms.transforms[norm_idx].std = self.std
 
     def get_random_series(self, data: pd.DataFrame, proportion: float) -> list or None:
-        if self.split_method == 'default':
+        if self.split_method == 'equal':
             full_series = []
             for subject in self.subjects:
                 for target in self.targets:
@@ -155,7 +155,8 @@ class AbstractDataModule(pl.LightningDataModule):
             subjects = random.sample(self.subjects, math.floor(len(self.subjects) * proportion))
             series = data.loc[data[self.subject_name].isin(subjects)][self.series_name].unique()
             return series
-        return None
+        series = list(data[self.series_name].unique())
+        return random.sample(series, math.floor(len(series) * proportion))
 
     def train_dataloader(self) -> DataLoader:
         """

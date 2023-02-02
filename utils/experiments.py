@@ -84,7 +84,8 @@ def lstm_cross_val_experiment(data_module: AbstractDataModule, partial_classifie
                               metrics: MetricCollection, sequence_model: partial = partial(UniLSTM),
                               callbacks: list = None, seq_callbacks: list = None, model_checkpoint_index: int = None,
                               project: str = "EMG Armband", save_dir: str = 'wandb_logs', seed: int = 0,
-                              classifier_params: dict = {}, model_type: type(nn.Module) = OriginalModel):
+                              classifier_params: dict = {}, model_type: type(nn.Module) = OriginalModel,
+                              seq_batch_size: int = 12):
     pl.seed_everything(seed, workers=True)
     if not classifier_params:
         classifier_params = data_module.get_data_parameters()
@@ -120,7 +121,8 @@ def lstm_cross_val_experiment(data_module: AbstractDataModule, partial_classifie
                                              feature_extraction_dataset=
                                              partial(data_module.dataset, window_length=data_module.window_length),
                                              feature_extraction_transforms=data_module.test_transforms,
-                                             window_length=100000)
+                                             window_length=100000,
+                                             batch_size=seq_batch_size)
 
         seq_calssifier = partial_seq_classifier(
             model=sequence_model(
