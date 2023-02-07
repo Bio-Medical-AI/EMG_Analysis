@@ -22,7 +22,7 @@ class NinaProDataModule(AbstractDataModule):
                  seed: int = None,
                  k_folds: int = 0,
                  dataset: type = SequenceDataset,
-                 split_method: str = 'subject',
+                 split_method: str = 'equal',
                  train_dataset: type = None,
                  window_length: int = 1):
         df_path = os.path.join(PKL_FOLDER, 'NinaPro', 'NinaPro.pkl')

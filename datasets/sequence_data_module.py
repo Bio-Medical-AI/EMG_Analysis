@@ -99,7 +99,7 @@ class SequenceDataModule(AbstractDataModule):
         all_series = []
         all_subjects = []
         all_lengths = []
-        for s in self.series:
+        for s in tqdm(self.series, "padding series"):
             records = self.data[self.data[self.series_name] == s].reset_index()
             sources = records[self.source_name]
             targets = records[self.target_name]

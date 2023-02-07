@@ -47,7 +47,7 @@ def prepare_knibm_low(prepare_dataset: Callable[[str, str, Callable[[], pd.DataF
 
 def prepare_knibm_high(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                        final_path: str) -> None:
-    prepare_dataset('knibm-high', '1N0xs9oAk_DLIu4hR_Caen4h4kEiGsWNe', partial(get_knibm_dataset, "high"), final_path)
+    prepare_dataset('knibm-high', '1fgyzWf9wXhiViOcoaTKi1BNNNA2kWICT', partial(get_knibm_dataset, "high"), final_path)
 
 
 final_folder = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data')
@@ -172,6 +172,7 @@ def get_ninapro_dataset() -> pd.DataFrame:
     subjects = []
     last_series = -1
     for subject in range(1, 28):
+        start_gest = 0
         for session in range(1, 4):
             data = extract_data(os.path.join(
                 os.path.dirname(os.getcwd()),
@@ -186,20 +187,25 @@ def get_ninapro_dataset() -> pd.DataFrame:
                 f'S{str(subject)}_A1_E{str(session)}.mat'),
                 'stimulus')
             recordings.extend([d.reshape(10, -1) for d in data])
-            labels.extend(gesture[:, 0])
-            # counter = 1 + last_series
-            # series.append(counter)
-            # previous = gesture[0, 0]
-            # for gest in gesture[1:, 0]:
-            #     if gest != previous:
-            #         counter += 1
-            #     previous = gest
-            #     series.append(counter)
-            # last_series = counter
+            proper_gesture = [(g if g == 0 else g + start_gest) for g in gesture[:, 0]]
+            start_gest = max(proper_gesture)
+            labels.extend(proper_gesture)
+            counter = 1 + last_series
+            series.append(counter)
+            previous = gesture[0, 0]
+            for gest in gesture[1:, 0]:
+                if gest != previous:
+                    counter += 1
+                previous = gest
+                series.append(counter)
+            last_series = counter
             subjects.extend([subject for _ in range(gesture.shape[0])])
-            series.extend([(subject-1) * 3 + (session-1) for _ in range(gesture.shape[0])])
-
-    return pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
+            # series.extend([(subject-1) * 3 + (session-1) for _ in range(gesture.shape[0])])
+    df = pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
+    df = df.loc[df['label'] != 0]
+    df['label'] = df['label'] - 1
+    df.reset_index(inplace=True)
+    return df
 
 
 def get_myoarmband_dataset() -> pd.DataFrame:
@@ -292,8 +298,8 @@ def get_knibm_dataset(version: str = "low") -> pd.DataFrame:
     labels = []
     series = []
     subjects = []
-    for subject in range(1, 2):
-        for session in range(1, 4):
+    for subject in range(1, 11):
+        for session in range(1, 6):
             for gest in range(1, 9):
                 data = bin_2_ndarray(os.path.join(
                     os.path.dirname(os.getcwd()),

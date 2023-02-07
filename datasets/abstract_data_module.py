@@ -151,6 +151,12 @@ class AbstractDataModule(pl.LightningDataModule):
                                   [self.series_name].unique())
                     full_series += random.sample(series, math.floor(len(series) * proportion))
             return full_series
+        elif self.split_method == 'trials':
+            full_series = []
+            for subject in self.subjects:
+                series = list(data.loc[data[self.subject_name] == subject][self.series_name].unique())
+                full_series += random.sample(series, math.floor(len(series) * proportion))
+            return full_series
         elif self.split_method == 'subject':
             subjects = random.sample(self.subjects, math.floor(len(self.subjects) * proportion))
             series = data.loc[data[self.subject_name].isin(subjects)][self.series_name].unique()
