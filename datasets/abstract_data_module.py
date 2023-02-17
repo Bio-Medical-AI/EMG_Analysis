@@ -115,7 +115,7 @@ class AbstractDataModule(pl.LightningDataModule):
             self.splits['test'] = self.folds[(self.fold + 1) % self.k_folds]
 
     def calculate_mean_std(self) -> None:
-        train_values = np.stack([item for _, item in self.data.iloc[self.splits['test']][self.source_name].iteritems()])
+        train_values = np.stack([item for _, item in self.data.iloc[self.splits['train']][self.source_name].iteritems()])
         self.mean = np.mean(train_values)
         self.std = np.std(train_values)
         norm_idx = None
@@ -158,7 +158,8 @@ class AbstractDataModule(pl.LightningDataModule):
                 full_series += random.sample(series, math.floor(len(series) * proportion))
             return full_series
         elif self.split_method == 'subject':
-            subjects = random.sample(self.subjects, math.floor(len(self.subjects) * proportion))
+            subject_ids = list(data[self.subject_name].unique())
+            subjects = random.sample(subject_ids, math.floor(len(subject_ids) * proportion))
             series = data.loc[data[self.subject_name].isin(subjects)][self.series_name].unique()
             return series
         series = list(data[self.series_name].unique())

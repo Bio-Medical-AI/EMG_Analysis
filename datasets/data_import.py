@@ -261,6 +261,8 @@ def get_myoarmband_dataset() -> pd.DataFrame:
 
 
 def get_knibm_dataset(version: str = "low") -> pd.DataFrame:
+
+    # this method transforms binary file to ndarray
     def bin_2_ndarray(input_file: str, data_bits: int = 8, channel_cnt: int = 8) -> np.ndarray:
         input_file = get_absolute_path(input_file)
         if data_bits == 12:
@@ -294,6 +296,26 @@ def get_knibm_dataset(version: str = "low") -> pd.DataFrame:
         file.close()
         return np.array(records, dtype=float)
 
+    # this method returns a series containing counts of unique records
+    def records_counts(df: pd.DataFrame):
+        return df["spectrograms"].value_counts()
+
+    # this method finds minimal number of records for one recording
+    def min_records(df: pd.DataFrame):
+        return min(df["spectrograms"].value_counts())
+
+    # this method cuts all recordings to 'min_records' number of records
+    def cut_recordings(df: pd.DataFrame):
+        rec_counts = records_counts(df).sort_index(ascending=True)
+        min_rec = min_records(df)
+        first_to_drop = min_rec
+        indexes = []
+        for spectrogram in rec_counts.index.values.tolist():
+            indexes.extend(range(first_to_drop, first_to_drop + (rec_counts[spectrogram] - min_rec)))
+            first_to_drop += rec_counts[spectrogram]
+        df = df.drop(indexes).reset_index(drop=True)
+        return df
+
     recordings = []
     labels = []
     series = []
@@ -310,9 +332,9 @@ def get_knibm_dataset(version: str = "low") -> pd.DataFrame:
                     f'{str(gest)}.bin'))
                 recordings.extend([data[i] for i in range(data.shape[0])])
                 labels.extend([gest - 1 for _ in range(data.shape[0])])
-                series.extend([(session - 1) * 8 + gest - 1 for _ in range(data.shape[0])])
+                series.extend([(subject - 1) * 40 + (session - 1) * 8 + gest - 1 for _ in range(data.shape[0])])
                 subjects.extend([subject for _ in range(data.shape[0])])
-    return pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
+    return cut_recordings(pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects}))
 
 
 def save_arrays(dataframe: pd.DataFrame, name: str, path: os.path) -> pd.DataFrame:
