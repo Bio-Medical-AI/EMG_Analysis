@@ -150,3 +150,62 @@ def lstm_cross_val_experiment(data_module: AbstractDataModule, partial_classifie
         trainer.test(model=seq_calssifier, datamodule=seq_data_module)
         wandb.finish()
         data_module.next_fold()
+
+
+def xgb_cross_val_experiments(data_module: AbstractDataModule, partial_classifier: partial, name: str, max_epochs: int,
+                              project: str = WANDB_PROJECT_NAME, save_dir: str = 'wandb_logs', k: int = 0):
+    """
+    Perform xgb experiment with cross-validation
+    Args:
+        data_module: Data module representing dataset.
+        partial_classifier: Partially initialized classifier, that doesn't have model defined yet.
+        name: Display name for the run.
+        max_epochs: Maximum amount of epochs to perform. To enable infinite training, set max_epochs to -1.
+        project: Name of wandb project
+        save_dir: Path to directory in which logs will be saved
+        k: number of current fold
+    """
+    classifier = partial_classifier()
+    logger = WandbLogger(project=project, name=name, save_dir=save_dir)
+    trainer = pl.Trainer(max_epochs=max_epochs, accelerator="cpu", logger=logger, num_sanity_val_steps=0)
+    trainer.fit(model=classifier, datamodule=data_module)
+    trainer.test(model=classifier, datamodule=data_module)
+    wandb.finish()
+    classifier.xgbmodel.save_model(os.path.join(MODELS_FOLDER, f'{name.replace(" ", "_").lower()}_{k}_fold.json'))
+    data_module.next_fold()
+
+
+def xgb_cross_val_experiments_file(data_module: AbstractDataModule, model_files: List[str], name: str,
+                                   max_epochs: int, project: str = WANDB_PROJECT_NAME, save_dir: str = 'wandb_logs',
+                                   seed: int = 0, time_window: list[int] = [150], time_step: list[int] = [10],
+                                   measurements: MetricCollection = MetricCollection([]), classifier_params: dict = {},
+                                   model_type: type(nn.Module) = OriginalModel):
+    """
+    Perform xgb experiment with cross-validation with models loaded from a file
+    Args:
+        data_module: Data module representing dataset.
+        model_files: list of model paths
+        name: Display name for the run.
+        max_epochs: Maximum amount of epochs to perform. To enable infinite training, set max_epochs to -1.
+        project: Name of wandb project
+        save_dir: Path to directory in which logs will be saved
+        seed: Seed for randomization
+        time_window: List of time windows for majority voting
+        time_step: List of time steps for majority voting
+        measurements: collection of metrics used for evaluation of model result
+        classifier_params: params, that will be passed to model
+        model_type: Type of model used by classifier
+    """
+    pl.seed_everything(seed, workers=True)
+    k_folds = data_module.k_folds
+    if not classifier_params:
+        classifier_params = data_module.get_data_parameters()
+    model = model_type(**classifier_params)
+    for k in tqdm(range(k_folds)):
+        model.load_state_dict(torch.load(os.path.join(MODELS_FOLDER, model_files[k])))
+        model.model = model.model[0:26]
+        partial_classifier = partial(LightningXGBClassifier, model, data_module.num_classes, monitor='val_accuracy',
+                                     tree_method='gpu_hist', time_window=time_window, time_step=time_step,
+                                     measurements=measurements)
+        xgb_cross_val_experiments(data_module=data_module, partial_classifier=partial_classifier, name=name,
+                                  max_epochs=max_epochs, project=project, save_dir=save_dir, k=k)
