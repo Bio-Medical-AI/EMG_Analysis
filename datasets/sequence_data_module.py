@@ -14,6 +14,9 @@ from datasets.sequence_dataset import SequenceDataset
 
 
 class SequenceDataModule(AbstractDataModule):
+    """
+    DataModule to load data during experiments, designed for Recurrent Networks (RNN, CRNN)
+    """
     def __init__(self,
                  df_path: os.PathLike or str,
                  width: int,
@@ -42,6 +45,30 @@ class SequenceDataModule(AbstractDataModule):
                  window_length: int = 1,
                  window_step: int = None
                  ):
+        """
+        Args:
+            df_path: Path to stored dataframe
+            width: Width of sample from dataset
+            height: Height of sample from dataset
+            channels: Channels of sample from dataset
+            num_classes: Number of classes that sample can be classified as such.
+            train_transforms: Sequence of transforms for training dataset.
+            val_transforms: Sequence of transforms for validation dataset.
+            test_transforms: Sequence of transforms for test dataset.
+            train_vs_rest_size: Part of the whole data that should be used for training. Not important for crossvalidation.
+            val_vs_test_size: Part of the data unused for training that should be used for validation. Not important for crossvalidation.
+            source_name: Name of column in dataframe with data
+            target_name: Name of column in dataframe with labels
+            series_name: Name of column in dataframe with series number
+            subject_name: Name of column in dataframe with subject number
+            batch_size: Size of single batch of data.
+            num_workers: Number of workers used for loading data
+            shuffle_train: Should training data be shuffled for every epoch
+            seed: Seed value for all random generators taking part in process of loading data
+            dataset: Type of dataset that will be used for validation and testing. If train_dataset isn't defined, it will also be used for training.
+            train_dataset: Type of dataset that will be used for training. If isn't defined, 'dataset' will also be used for training.
+            window_length: Amount of samples from original dataset to compress into one.
+        """
         self.feature_extraction_dataset = feature_extraction_dataset
         self.feature_extraction: nn.Module = feature_extraction
         self.window_step: int = window_step
@@ -143,15 +170,14 @@ class SequenceDataModule(AbstractDataModule):
         self.split_data()
 
     def split_data(self) -> None:
+        """
+        Prepares training, validation and test splits.
+        """
         self.splits['train'] = self.data.index[self.data[self.series_name].isin(self.splits_series['train'])]
         self.splits['val'] = self.data.index[self.data[self.series_name].isin(self.splits_series['val'])]
         self.splits['test'] = self.data.index[self.data[self.series_name].isin(self.splits_series['test'])]
 
     def train_dataloader(self) -> DataLoader:
-        """
-        Prepares and returns train dataloader
-        :return:
-        """
         return DataLoader(
             self.train_dataset(data_frame=self.data.iloc[self.splits['train']].reset_index(),
                                transform=self.train_transforms,
@@ -164,10 +190,6 @@ class SequenceDataModule(AbstractDataModule):
         )
 
     def val_dataloader(self) -> DataLoader:
-        """
-        Prepares and returns validate dataloader
-        :return:
-        """
         return DataLoader(
             self.dataset(data_frame=self.data.iloc[self.splits['val']].reset_index(),
                          transform=self.val_transforms,
@@ -179,10 +201,6 @@ class SequenceDataModule(AbstractDataModule):
         )
 
     def test_dataloader(self) -> DataLoader:
-        """
-        Prepares and returns test dataloader
-        :return:
-        """
         return DataLoader(
             self.dataset(data_frame=self.data.iloc[self.splits['test']].reset_index(),
                          transform=self.test_transforms,

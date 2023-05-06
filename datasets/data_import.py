@@ -14,39 +14,69 @@ from definitions import DATA_FOLDER
 
 def prepare_datasets(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                      final_path: str) -> None:
+    """
+    Download and prepare 3 base datasets.
+    Args:
+        prepare_dataset: function like: prepare_frame_dataset or prepare_dataframe_dataset
+        final_path: folder in which datasets will be saved.
+    """
     prepare_capgmyo(prepare_dataset, final_path)
-    prepare_csl(prepare_dataset, final_path)
     prepare_ninapro(prepare_dataset, final_path)
     prepare_myoarmband(prepare_dataset, final_path)
 
 
 def prepare_capgmyo(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                     final_path: str) -> None:
+    """
+    Download and prepare CapgMyo dataset.
+    Args:
+        prepare_dataset: function like: prepare_frame_dataset or prepare_dataframe_dataset
+        final_path: folder in which datasets will be saved.
+    """
     prepare_dataset('CapgMyo', '1Xjtkr-rl2m3_80BvNg1wYSXN8yNaevZl', get_capgmyo_dataset, final_path)
-
-
-def prepare_csl(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
-                final_path: str) -> None:
-    prepare_dataset('csl-hdemg', '11lXdDHdSlT1whpyEuA1Dv24QT4AKkMJ1', get_csl_dataset, final_path)
 
 
 def prepare_ninapro(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                     final_path: str) -> None:
+    """
+    Download and prepare NinaPro dataset.
+    Args:
+        prepare_dataset: function like: prepare_frame_dataset or prepare_dataframe_dataset
+        final_path: folder in which datasets will be saved.
+    """
     prepare_dataset('NinaPro', '1BtNxCiGIqVWYiPtf0AxyZuTY0uz8j6we', get_ninapro_dataset, final_path)
 
 
 def prepare_myoarmband(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                        final_path: str) -> None:
+    """
+    Download and prepare MyoArmband dataset.
+    Args:
+        prepare_dataset: function like: prepare_frame_dataset or prepare_dataframe_dataset
+        final_path: folder in which datasets will be saved.
+    """
     prepare_dataset('MyoArmband', '1dO72tvtx5HOzZZ0C56IIUdCIVO3nNGt5', get_myoarmband_dataset, final_path)
 
 
 def prepare_knibm_low(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                        final_path: str) -> None:
+    """
+    Download and prepare KNIBM Low dataset.
+    Args:
+        prepare_dataset: function like: prepare_frame_dataset or prepare_dataframe_dataset
+        final_path: folder in which datasets will be saved.
+    """
     prepare_dataset('knibm-low', '1N0xs9oAk_DLIu4hR_Caen4h4kEiGsWNe', partial(get_knibm_dataset, "low"), final_path)
 
 
 def prepare_knibm_high(prepare_dataset: Callable[[str, str, Callable[[], pd.DataFrame], str], None],
                        final_path: str) -> None:
+    """
+    Download and prepare KNIBM High dataset.
+    Args:
+        prepare_dataset: function like: prepare_frame_dataset or prepare_dataframe_dataset
+        final_path: folder in which datasets will be saved.
+    """
     prepare_dataset('knibm-high', '1fgyzWf9wXhiViOcoaTKi1BNNNA2kWICT', partial(get_knibm_dataset, "high"), final_path)
 
 
@@ -55,6 +85,14 @@ final_folder = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Data
 
 def prepare_frame_dataset(dataset_name: str, file_id: str, data_loading_function: Callable[[], pd.DataFrame],
                           final_folder: str) -> None:
+    """
+    Prepare dataset in form of separate files with arrays representing samples.
+    Args:
+        dataset_name: Name of dataset.
+        file_id: Identifier of dataset on Google Drive for download with gdown.
+        data_loading_function: Function that will return loaded dataset
+        final_folder: folder in which datasets will be saved.
+    """
     prepare_folders(dataset_name, file_id)
     if not os.path.exists(final_folder):
         os.makedirs(final_folder)
@@ -63,6 +101,14 @@ def prepare_frame_dataset(dataset_name: str, file_id: str, data_loading_function
 
 def prepare_dataframe_dataset(dataset_name: str, file_id: str, data_loading_function: Callable[[], pd.DataFrame],
                               final_folder: str) -> None:
+    """
+    Prepare dataset in form of dataframe stored as .pkl file.
+    Args:
+        dataset_name: Name of dataset.
+        file_id: Identifier of dataset on Google Drive for download with gdown.
+        data_loading_function: Function that will return loaded dataset
+        final_folder: folder in which datasets will be saved.
+    """
     prepare_folders(dataset_name, file_id)
     if not os.path.exists(final_folder):
         os.makedirs(final_folder)
@@ -72,7 +118,13 @@ def prepare_dataframe_dataset(dataset_name: str, file_id: str, data_loading_func
     data_loading_function().to_pickle(os.path.join(final_folder, dataset_name, f'{dataset_name}.pkl'))
 
 
-def prepare_folders(dataset_name: str, file_id: str):
+def prepare_folders(dataset_name: str, file_id: str) -> None:
+    """
+    Prepare folders for storing data, downloads and extracts data into them.
+    Args:
+        dataset_name: Name of dataset.
+        file_id: Identifier of dataset on Google Drive for download with gdown.
+    """
     if not os.path.exists(DATA_FOLDER):
         os.makedirs(DATA_FOLDER)
     destined_folder = os.path.join(DATA_FOLDER, dataset_name)
@@ -85,19 +137,44 @@ def prepare_folders(dataset_name: str, file_id: str):
 
 
 def import_datasets(destination: str, id: str) -> None:
+    """
+    Download compressed data files from Google Drive.
+    Args:
+        destination: Path of file to which download compressed dataset.
+        id: Identifier of dataset on Google Drive for download with gdown.
+    """
     gdown.download(id=id, output=destination, quiet=False)
 
 
 def extract_data(relative_path: bytes or str, name: str) -> np.ndarray:
+    """
+    Extract data from MatLab file to an array.
+    Args:
+        relative_path: Relative path to .mat file
+        name: Name of the column with desired data in .mat file
+
+    Returns: Array with desired data
+    """
     path = get_absolute_path(relative_path)
     return np.array(scipy.io.loadmat(path)[name])
 
 
 def get_absolute_path(relative_path: bytes or str) -> bytes or str:
+    """
+    Get Absolute path from relative_path
+    Args:
+        relative_path: Relative path (in relation to current file)
+
+    Returns: Absolute path
+    """
     return os.path.join(Path(os.path.abspath(__file__)).parent, relative_path)
 
 
 def get_capgmyo_dataset() -> pd.DataFrame:
+    """
+    Go through original files of CapgMyo dataset and convert them into form useful for computation in python.
+    Returns: Dataframe with dataset.
+    """
     def int_in_3(num: int) -> str:
         if num < 0:
             return '000'
@@ -135,37 +212,11 @@ def get_capgmyo_dataset() -> pd.DataFrame:
     return pd.DataFrame({'record': [i[0] for i in recordings], 'label': labels, 'spectrograms': series, 'subject': subjects})
 
 
-def get_csl_dataset() -> pd.DataFrame:
-    recordings = []
-    labels = []
-    series = []
-    subjects = []
-    for subject in range(1, 6):
-        for session in range(1, 6):
-            for gest in range(27):
-                data = extract_data(os.path.join(
-                    os.path.dirname(os.getcwd()),
-                    'data',
-                    'csl-hdemg',
-                    f'subject{str(subject)}',
-                    f'session{str(session)}',
-                    f'gest{str(gest)}.mat'),
-                    'gestures')
-                for i in range(data.shape[0]):
-                    for j in range(data[i].shape[0]):
-                        trial = data[i, j]
-                        # deleting edge channels
-                        trial = np.delete(trial, np.s_[7:192:8], 0)
-                        trial = np.reshape(trial, (24, 7, -1))
-                        # trial = np.flipud(np.transpose(trial, axes=(1, 0, 2)))
-                        recordings.extend([trial[:, :, k] for k in range(trial.shape[2])])
-                        labels.extend([gest for _ in range(trial.shape[2])])
-                        series.extend([gest + (session - 1) * 27 + (subject - 1) * 135 for _ in range(trial.shape[2])])
-                        subjects.extend([subject for _ in range(trial.shape[2])])
-    return pd.DataFrame({'record': recordings, 'label': labels, 'spectrograms': series, 'subject': subjects})
-
-
 def get_ninapro_dataset() -> pd.DataFrame:
+    """
+    Go through original files of NinaPro dataset and convert them into form useful for computation in python.
+    Returns: Dataframe with dataset.
+    """
     recordings = []
     labels = []
     series = []
@@ -209,6 +260,10 @@ def get_ninapro_dataset() -> pd.DataFrame:
 
 
 def get_myoarmband_dataset() -> pd.DataFrame:
+    """
+    Go through original files of MyoArmband dataset and convert them into form useful for computation in python.
+    Returns: Dataframe with dataset.
+    """
     def format_data_to_train(vector_to_format):
         emg_vector = []
         records = []
@@ -261,7 +316,12 @@ def get_myoarmband_dataset() -> pd.DataFrame:
 
 
 def get_knibm_dataset(version: str = "low") -> pd.DataFrame:
-
+    """
+    Go through original files of given KNIBM dataset and convert them into form useful for computation in python.
+    Args:
+        version: name of knibm sub-dataset that should be processed
+    Returns: Dataframe with dataset.
+    """
     # this method transforms binary file to ndarray
     def bin_2_ndarray(input_file: str, data_bits: int = 8, channel_cnt: int = 8) -> np.ndarray:
         input_file = get_absolute_path(input_file)
@@ -338,6 +398,16 @@ def get_knibm_dataset(version: str = "low") -> pd.DataFrame:
 
 
 def save_arrays(dataframe: pd.DataFrame, name: str, path: os.path) -> pd.DataFrame:
+    """
+    Save all samples from dataset as np.arrays
+    Args:
+        dataframe: dataframe with samples to convert and save
+        name: Name of dataset
+        path: path to folder in which sub-folder for dataset will be created
+
+    Returns:
+
+    """
     paths = []
     base_path = os.path.join(path, name)
     for index, row in dataframe.iterrows():

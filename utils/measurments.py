@@ -1,14 +1,17 @@
 import numpy as np
 import torch
 from torch import nn
-from torchmetrics import ConfusionMatrix
 
 
-def measure_eval_time(model: nn.Module, dummy_input: torch.Tensor):
+def measure_eval_time(model: nn.Module, dummy_input: torch.Tensor) -> tuple[float, float]:
     """
-    :param model: Any model/classifier
-    :param dummy_input: tensor of size accepted by given model
-    :return: tuple of mean time, measured in milliseconds and its standard deviation
+    Measure the time of evaluating model or module.
+    Args:
+        model: Any model/classifier
+        dummy_input: tensor of size accepted by given model
+
+    Returns:
+        tuple of mean time, measured in milliseconds and its standard deviation
     """
     device = torch.device("cuda")
     model.to(device)
@@ -34,6 +37,6 @@ def measure_eval_time(model: nn.Module, dummy_input: torch.Tensor):
             timings[rep] = curr_time
 
     mean_syn = np.sum(timings) / repetitions
-    std_syn = np.std(timings)
+    std_syn = np.std(timings).item()
     return mean_syn, std_syn
 

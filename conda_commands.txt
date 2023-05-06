@@ -4,3 +4,5 @@ conda install -c anaconda pandas
 conda install -c conda-forge py-xgboost
 conda install -c conda-forge patool
 conda install -c conda-forge wandb
+
+conda install --file requirements.txt -c pytorch -c nvidia -c anaconda -c conda-forge

@@ -5,12 +5,23 @@ from torch.utils.data import Dataset
 
 
 class AbstractDataset(Dataset):
+    """
+    Base dataset for unordered images.
+    """
     def __init__(self,
                  data_frame: pd.DataFrame,
                  transform: Compose = ToTensor(),
                  source_name: str = 'path',
                  target_name: str = 'label',
                  series_name: str = 'spectrograms'):
+        """
+        Args:
+            data_frame: DataFrame containing all data included in dataset
+            transform: Transforms that are meant to be applied to single data sample
+            source_name: Name of column in dataframe with data samples
+            target_name: Name of column in dataframe with target classes
+            series_name: Name of column in dataframe with series ID
+        """
         self.records: pd.Series = data_frame[source_name]
         self.labels: pd.Series = data_frame[target_name]
         self.series: pd.Series = data_frame[series_name]
