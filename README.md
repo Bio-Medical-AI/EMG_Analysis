@@ -1,7 +1,7 @@
 # EMG Analysis
 ## Introduction
 
-Main idea of this project is to find the ways to extract as much information from EMG data. We have defined our problem as gesture recognition based on data extracted form EMG armband, which is recording signals form arm of a subject.
+Main idea of this project is to find the ways to extract as much information from EMG data as it is possible. We have defined our problem as gesture recognition based on data extracted form EMG armband, which is recording signals form arm of a subject.
 
 ## EMG
 
